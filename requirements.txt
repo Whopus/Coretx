@@ -10,6 +10,13 @@ litellm>=1.0.0
 # Text processing and search
 scikit-learn>=1.0.0  # For TF-IDF if needed as fallback
 
+# Display and formatting
+rich>=13.0.0  # For beautiful console output
+
+# Language parsing
+beautifulsoup4>=4.12.0  # For HTML parsing
+cssutils>=2.7.0  # For CSS parsing
+
 # Development dependencies (optional)
 pytest>=7.0.0
 pytest-cov>=4.0.0

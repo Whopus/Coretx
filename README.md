@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-Coretx is an advanced code localization engine that combines static analysis, dynamic graph construction, and LLM-powered reasoning to precisely identify relevant code sections for bug fixes, feature implementations, and code understanding tasks.
+Coretx is an advanced multi-language code analysis engine that combines static analysis, dynamic graph construction, and LLM-powered reasoning to precisely identify relevant code sections for bug fixes, feature implementations, and code understanding tasks across diverse technology stacks.
 
 ## 📖 About the Name
 
@@ -12,14 +12,33 @@ Coretx is an advanced code localization engine that combines static analysis, dy
 
 The "core" represents the essential, fundamental elements of a codebase, while "context" (abbreviated as "tx") emphasizes the relational understanding between different code components. Together, Coretx creates the contextual foundation that bridges human intent with machine understanding in code analysis tasks.
 
-## 🚀 Features
+## 🚀 Key Features
 
-- **Multi-Modal Code Analysis**: Combines AST parsing, dependency graphs, and semantic search
-- **LLM Integration**: Supports OpenAI, Anthropic, and custom endpoints with flexible configuration
-- **Language Support**: Python, JavaScript, TypeScript, Java, C/C++, and more
-- **CLI Interface**: Easy-to-use command-line tools
-- **Extensible Architecture**: Plugin-based design for custom analyzers
-- **Flexible Configuration**: Multiple ways to configure API settings and behavior
+### 🌐 Multi-Language Support
+- **Programming Languages**: Python, JavaScript/TypeScript, Java, C/C++
+- **Web Technologies**: HTML, CSS, SCSS/SASS, Less
+- **Documentation**: Markdown, reStructuredText
+- **Configuration**: JSON, YAML, XML
+- **Universal Extension System**: Easy to add support for new languages
+
+### 🔍 Advanced Analysis Capabilities
+- **AST-Based Parsing**: Deep structural analysis of code entities
+- **Cross-Language Relationships**: Discovers connections between different file types
+- **Dependency Graph Construction**: Maps imports, includes, and references
+- **Semantic Entity Extraction**: Classes, functions, methods, variables, and more
+- **Web Asset Relationships**: CSS-HTML styling, JavaScript-HTML scripting connections
+
+### 🎨 Rich Display & Visualization
+- **Beautiful Console Output**: Rich formatting with colors, tables, and progress bars
+- **Interactive Results**: Detailed entity information with syntax highlighting
+- **Graph Statistics**: Comprehensive metrics and language breakdowns
+- **Export Capabilities**: HTML, JSON, and text format outputs
+
+### 🔧 Extensible Architecture
+- **Plugin-Based Design**: Modular language parsers and analyzers
+- **Custom Entity Types**: Support for domain-specific code patterns
+- **Flexible Configuration**: Adaptable to different project structures
+- **LLM Integration**: OpenAI, Anthropic, and custom endpoint support
 
 ## 🔧 Installation
 
@@ -35,9 +54,84 @@ cd Coretx
 pip install -e .
 ```
 
+## 🌐 Multi-Language Analysis
+
+Coretx provides comprehensive support for analyzing projects with multiple programming languages and technologies. The universal extension system automatically detects file types and applies appropriate parsers.
+
+### Supported Languages & Technologies
+
+| Category | Languages/Technologies | File Extensions |
+|----------|----------------------|-----------------|
+| **Programming** | Python, JavaScript, TypeScript | `.py`, `.js`, `.ts`, `.jsx`, `.tsx` |
+| **Web Frontend** | HTML, CSS, SCSS, SASS, Less | `.html`, `.css`, `.scss`, `.sass`, `.less` |
+| **Documentation** | Markdown, reStructuredText | `.md`, `.rst`, `.markdown` |
+| **Configuration** | JSON, YAML, XML | `.json`, `.yaml`, `.yml`, `.xml` |
+
+### Entity Types Extracted
+
+- **Code Entities**: Classes, functions, methods, variables, imports, modules
+- **Web Entities**: HTML elements, CSS rules, selectors, properties
+- **Documentation**: Headings, code blocks, links, text sections
+- **Relationships**: Cross-language dependencies, styling connections, script references
+
 ## 🚀 Quick Start
 
-### Python API
+### Multi-Language Project Analysis
+
+```python
+from coretx.core.extensions.registry import registry
+from coretx.core.agent.enhanced_tools import enhanced_tools
+
+# Initialize the multi-language system
+registry.initialize_default_parsers()
+
+# Analyze a directory with multiple languages
+result = enhanced_tools.tools['analyze_directory'](
+    directory_path="/path/to/your/project",
+    recursive=True,
+    show_stats=True
+)
+
+print(f"Found {result['total_entities']} entities across {result['files_processed']} files")
+print(f"Languages detected: {list(result['language_stats'].keys())}")
+```
+
+### Parse Individual Files
+
+```python
+# Parse a Python file
+python_result = enhanced_tools.tools['parse_file'](
+    file_path="app.py",
+    show_content=True
+)
+
+# Parse a JavaScript file
+js_result = enhanced_tools.tools['parse_file'](
+    file_path="script.js",
+    show_content=True
+)
+
+# Parse an HTML file
+html_result = enhanced_tools.tools['parse_file'](
+    file_path="index.html",
+    show_content=True
+)
+```
+
+### Discover Cross-Language Relationships
+
+```python
+# Find relationships between different file types
+relationships = enhanced_tools.tools['discover_relationships'](
+    directory_path="/path/to/your/project",
+    show_details=True
+)
+
+print(f"Discovered {relationships['total_relationships']} relationships")
+print("Relationship types:", relationships['relationship_types'])
+```
+
+### Traditional Code Localization
 
 ```python
 from coretx import quick_localize

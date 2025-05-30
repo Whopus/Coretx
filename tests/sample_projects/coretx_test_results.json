@@ -1,0 +1,14 @@
+{
+  "Quick Localize": {
+    "success": false,
+    "error": "Only one live display may be active at once"
+  },
+  "Create Locator": {
+    "success": false,
+    "error": "LocAgentConfig.__init__() got an unexpected keyword argument 'model_name'"
+  },
+  "Custom Config": {
+    "success": false,
+    "error": "Only one live display may be active at once"
+  }
+}

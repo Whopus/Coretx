@@ -3,13 +3,13 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "corectx"
+name = "coretx"
 version = "0.1.0"
 description = "CoreCtx - Advanced Code Localization Engine"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "CoreCtx Team", email = "team@corectx.dev"}
+    {name = "CoreCtx Team", email = "team@coretx.dev"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -72,13 +72,13 @@ Documentation = "https://github.com/Whopus/CoreCtx#readme"
 "Bug Tracker" = "https://github.com/Whopus/CoreCtx/issues"
 
 [project.scripts]
-corectx = "corectx.cli:main"
+coretx = "coretx.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["corectx*"]
+include = ["coretx*"]
 
 [tool.setuptools.package-data]
-corectx = ["*.yaml", "*.yml", "*.json", "*.md"]
+coretx = ["*.yaml", "*.yml", "*.json", "*.md"]
 
 [tool.black]
 line-length = 88

@@ -15,7 +15,7 @@ def test_package_imports():
     
     # Test main package import
     try:
-        import corectx
+        import coretx
         print("✅ Main package import successful")
     except ImportError as e:
         print(f"❌ Failed to import main package: {e}")
@@ -23,7 +23,7 @@ def test_package_imports():
     
     # Test main functions import
     try:
-        from corectx import quick_localize, create_locator, LocAgentConfig
+        from coretx import quick_localize, create_locator, LocAgentConfig
         print("✅ Main functions import successful")
     except ImportError as e:
         print(f"❌ Failed to import main functions: {e}")
@@ -31,7 +31,7 @@ def test_package_imports():
     
     # Test CLI module import
     try:
-        import corectx.cli
+        import coretx.cli
         print("✅ CLI module import successful")
     except ImportError as e:
         print(f"❌ Failed to import CLI module: {e}")
@@ -45,7 +45,7 @@ def test_config_system():
     print("🧪 Testing configuration system...")
     
     try:
-        from corectx import LocAgentConfig
+        from coretx import LocAgentConfig
         
         # Test config creation
         config = LocAgentConfig()
@@ -69,7 +69,7 @@ def test_core_components():
     print("🧪 Testing core components...")
     
     try:
-        from corectx import create_locator, LocAgentConfig
+        from coretx import create_locator, LocAgentConfig
         
         # Test locator creation
         config = LocAgentConfig()
@@ -89,8 +89,8 @@ def test_package_structure():
     
     # Get package root
     try:
-        import corectx
-        package_root = Path(corectx.__file__).parent
+        import coretx
+        package_root = Path(coretx.__file__).parent
         
         # Check for required directories
         required_dirs = ['config', 'core', 'utils']
@@ -113,10 +113,10 @@ def test_cli_availability():
     print("🧪 Testing CLI availability...")
     
     try:
-        import corectx.cli
+        import coretx.cli
         
         # Check if main function exists
-        if hasattr(corectx.cli, 'main'):
+        if hasattr(coretx.cli, 'main'):
             print("✅ CLI main function available")
             return True
         else:
@@ -133,10 +133,10 @@ def test_version_info():
     print("🧪 Testing version information...")
     
     try:
-        import corectx
+        import coretx
         
-        if hasattr(corectx, '__version__'):
-            version = corectx.__version__
+        if hasattr(coretx, '__version__'):
+            version = coretx.__version__
             print(f"✅ Package version: {version}")
         else:
             print("⚠️  No version information found")

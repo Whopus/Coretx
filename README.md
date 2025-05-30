@@ -6,6 +6,10 @@
 
 CoreCtx is an advanced code localization engine that combines static analysis, dynamic graph construction, and LLM-powered reasoning to precisely identify relevant code sections for bug fixes, feature implementations, and code understanding tasks.
 
+## 📖 About the Name
+
+**coretx** is derived from the abbreviation of "**core context**". Its main function is to quickly construct a graph structure and relationship map of code folders, enabling fast content retrieval and the construction of the minimal logical closure for LLMs to understand the context and provide the most appropriate response.
+
 ## 🚀 Features
 
 - **Multi-Modal Code Analysis**: Combines AST parsing, dependency graphs, and semantic search
@@ -19,7 +23,7 @@ CoreCtx is an advanced code localization engine that combines static analysis, d
 
 ### From PyPI (coming soon)
 ```bash
-pip install corectx
+pip install coretx
 ```
 
 ### From Source
@@ -34,7 +38,7 @@ pip install -e .
 ### Python API
 
 ```python
-from corectx import quick_localize
+from coretx import quick_localize
 
 # Basic usage
 results = quick_localize(
@@ -59,15 +63,15 @@ for file_path, relevance in results.items():
 
 ```bash
 # Basic localization
-corectx localize /path/to/repo "Bug in authentication system"
+coretx localize /path/to/repo "Bug in authentication system"
 
 # With custom OpenAI configuration
-corectx localize /path/to/repo "Memory leak" \
+coretx localize /path/to/repo "Memory leak" \
   --openai-api-key "your-key" \
   --openai-base-url "https://api.openai.com/v1"
 
 # Using configuration file
-corectx localize /path/to/repo "Bug description" --config config.yaml
+coretx localize /path/to/repo "Bug description" --config config.yaml
 ```
 
 ## 📖 Documentation
@@ -135,7 +139,7 @@ export OPENAI_BASE_URL="https://api.openai.com/v1"
 ### Advanced Usage
 
 ```python
-from corectx import create_locator, LocAgentConfig
+from coretx import create_locator, LocAgentConfig
 
 # Create custom configuration
 config = LocAgentConfig()
@@ -187,7 +191,7 @@ python tests/test_config.py
 python tests/test_setup.py
 
 # Run with coverage (if pytest-cov is installed)
-pytest --cov=corectx tests/
+pytest --cov=coretx tests/
 ```
 
 ## 🤝 Contributing

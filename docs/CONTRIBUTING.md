@@ -63,7 +63,7 @@ git checkout -b fix/issue-description
 pytest
 
 # Run with coverage
-pytest --cov=corectx
+pytest --cov=coretx
 
 # Run specific test categories
 pytest -m "not slow"

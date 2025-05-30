@@ -11,9 +11,9 @@ from pathlib import Path
 
 # Import the CoreCtx modules
 try:
-    from corectx import LocAgentConfig, create_locator
-    from corectx.utils.config_utils import load_config, save_config
-    from corectx.config.settings import AgentConfig
+    from coretx import LocAgentConfig, create_locator
+    from coretx.utils.config_utils import load_config, save_config
+    from coretx.config.settings import AgentConfig
 except ImportError as e:
     print(f"Import error: {e}")
     print("Make sure CoreCtx is properly installed")

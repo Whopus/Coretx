@@ -43,7 +43,7 @@ The test script (`test_coretx.py`) includes various natural language queries to 
 
 The test script is configured to use the following OpenAI API settings:
 
-- **API Key**: `sk-Do6vjkCvmwTbWUoSD1E88935470445A6979e0cF3A6Ea1eD7`
+- **API Key**: `sk-Do6..`
 - **Base URL**: `https://ai.comfly.chat/v1/`
 - **Model**: `gpt-4.1`
 

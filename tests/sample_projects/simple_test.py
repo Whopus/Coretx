@@ -31,7 +31,7 @@ class SimpleCoretxTester:
     
     def __init__(self):
         # OpenAI configuration as provided by the user
-        self.openai_api_key = "sk-Do6vjkCvmwTbWUoSD1E88935470445A6979e0cF3A6Ea1eD7"
+        self.openai_api_key = "sk-Do6.."
         self.openai_base_url = "https://ai.comfly.chat/v1/"
         self.model_name = "gpt-4.1"
         

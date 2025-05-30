@@ -37,8 +37,8 @@ class GraphBuilder:
         # Build directory structure
         self._build_directory_structure(repo_path)
         
-        # Parse Python files and extract entities
-        self._parse_python_files(repo_path)
+        # Parse source files and extract entities
+        self._parse_source_files(repo_path)
         
         # Add all nodes and edges to graph
         self._construct_networkx_graph()
@@ -83,14 +83,20 @@ class GraphBuilder:
                     if dir_id:
                         self._add_edge(dir_id, file_node.id, EdgeType.CONTAINS)
     
-    def _parse_python_files(self, repo_path: Path) -> None:
-        """Parse Python files to extract classes and functions."""
-        for node in self.nodes.values():
-            if node.is_file and node.path and node.path.suffix == '.py':
-                try:
+    def _parse_source_files(self, repo_path: Path) -> None:
+        """Parse source files to extract classes and functions."""
+        # Create a list of file nodes to avoid modifying dict during iteration
+        file_nodes = [node for node in self.nodes.values() if node.is_file and node.path]
+        
+        for node in file_nodes:
+            try:
+                if node.path.suffix == '.py':
                     self._parse_python_file(node)
-                except Exception as e:
-                    logger.warning(f"Failed to parse {node.path}: {e}")
+                elif node.path.suffix == '.js':
+                    self._parse_javascript_file(node)
+                # Add more parsers for other languages as needed
+            except Exception as e:
+                logger.warning(f"Failed to parse {node.path}: {e}")
     
     def _parse_python_file(self, file_node: CodeNode) -> None:
         """Parse a single Python file."""
@@ -108,6 +114,148 @@ class GraphBuilder:
             
         except (SyntaxError, UnicodeDecodeError) as e:
             logger.warning(f"Cannot parse {file_node.path}: {e}")
+    
+    def _parse_javascript_file(self, file_node: CodeNode) -> None:
+        """Parse a single JavaScript file."""
+        try:
+            with open(file_node.path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Extract functions and classes using regex patterns
+            self._extract_js_functions(file_node, content)
+            self._extract_js_classes(file_node, content)
+            
+        except (UnicodeDecodeError, IOError) as e:
+            logger.warning(f"Cannot parse {file_node.path}: {e}")
+    
+    def _extract_js_functions(self, file_node: CodeNode, content: str) -> None:
+        """Extract JavaScript functions using regex."""
+        lines = content.split('\n')
+        
+        # Pattern for function declarations
+        function_patterns = [
+            r'^\s*function\s+(\w+)\s*\(',  # function name()
+            r'^\s*const\s+(\w+)\s*=\s*function\s*\(',  # const name = function()
+            r'^\s*let\s+(\w+)\s*=\s*function\s*\(',  # let name = function()
+            r'^\s*var\s+(\w+)\s*=\s*function\s*\(',  # var name = function()
+            r'^\s*(\w+)\s*:\s*function\s*\(',  # name: function() (object method)
+            r'^\s*(\w+)\s*\([^)]*\)\s*{',  # name() { (arrow function style)
+            r'^\s*const\s+(\w+)\s*=\s*\([^)]*\)\s*=>\s*{',  # const name = () => {
+            r'^\s*let\s+(\w+)\s*=\s*\([^)]*\)\s*=>\s*{',  # let name = () => {
+            r'^\s*var\s+(\w+)\s*=\s*\([^)]*\)\s*=>\s*{',  # var name = () => {
+        ]
+        
+        for line_num, line in enumerate(lines, 1):
+            for pattern in function_patterns:
+                match = re.search(pattern, line)
+                if match:
+                    func_name = match.group(1)
+                    
+                    # Find function end (simplified - just look for closing brace)
+                    end_line = self._find_js_block_end(lines, line_num - 1)
+                    
+                    # Create function node
+                    func_node = self._create_node(
+                        name=func_name,
+                        node_type=NodeType.FUNCTION,
+                        path=file_node.path,
+                        line_start=line_num,
+                        line_end=end_line,
+                        metadata={'language': 'javascript'}
+                    )
+                    
+                    # Add contains edge from file
+                    self._add_edge(file_node.id, func_node.id, EdgeType.CONTAINS)
+                    break
+    
+    def _extract_js_classes(self, file_node: CodeNode, content: str) -> None:
+        """Extract JavaScript classes using regex."""
+        lines = content.split('\n')
+        
+        # Pattern for class declarations
+        class_pattern = r'^\s*class\s+(\w+)'
+        
+        for line_num, line in enumerate(lines, 1):
+            match = re.search(class_pattern, line)
+            if match:
+                class_name = match.group(1)
+                
+                # Find class end
+                end_line = self._find_js_block_end(lines, line_num - 1)
+                
+                # Create class node
+                class_node = self._create_node(
+                    name=class_name,
+                    node_type=NodeType.CLASS,
+                    path=file_node.path,
+                    line_start=line_num,
+                    line_end=end_line,
+                    metadata={'language': 'javascript'}
+                )
+                
+                # Add contains edge from file
+                self._add_edge(file_node.id, class_node.id, EdgeType.CONTAINS)
+                
+                # Extract methods within the class
+                self._extract_js_class_methods(class_node, lines, line_num - 1, end_line)
+    
+    def _extract_js_class_methods(self, class_node: CodeNode, lines: List[str], 
+                                 start_line: int, end_line: int) -> None:
+        """Extract methods from a JavaScript class."""
+        method_patterns = [
+            r'^\s*(\w+)\s*\([^)]*\)\s*{',  # methodName() {
+            r'^\s*static\s+(\w+)\s*\([^)]*\)\s*{',  # static methodName() {
+            r'^\s*async\s+(\w+)\s*\([^)]*\)\s*{',  # async methodName() {
+            r'^\s*get\s+(\w+)\s*\(\s*\)\s*{',  # get propertyName() {
+            r'^\s*set\s+(\w+)\s*\([^)]*\)\s*{',  # set propertyName() {
+        ]
+        
+        for line_num in range(start_line + 1, min(end_line, len(lines))):
+            line = lines[line_num]
+            for pattern in method_patterns:
+                match = re.search(pattern, line)
+                if match:
+                    method_name = match.group(1)
+                    
+                    # Skip constructor as it's not a regular method
+                    if method_name == 'constructor':
+                        continue
+                    
+                    # Find method end
+                    method_end = self._find_js_block_end(lines, line_num)
+                    
+                    # Create method node
+                    method_node = self._create_node(
+                        name=method_name,
+                        node_type=NodeType.FUNCTION,
+                        path=class_node.path,
+                        line_start=line_num + 1,
+                        line_end=method_end,
+                        metadata={'language': 'javascript', 'is_method': True}
+                    )
+                    
+                    # Add contains edge from class
+                    self._add_edge(class_node.id, method_node.id, EdgeType.CONTAINS)
+                    break
+    
+    def _find_js_block_end(self, lines: List[str], start_line: int) -> int:
+        """Find the end of a JavaScript block (simplified brace matching)."""
+        brace_count = 0
+        found_opening = False
+        
+        for i in range(start_line, len(lines)):
+            line = lines[i]
+            for char in line:
+                if char == '{':
+                    brace_count += 1
+                    found_opening = True
+                elif char == '}':
+                    brace_count -= 1
+                    if found_opening and brace_count == 0:
+                        return i + 1
+        
+        # If we can't find the end, return a reasonable estimate
+        return min(start_line + 20, len(lines))
     
     def _handle_code_edge_cases(self, code: str) -> str:
         """Handle common parsing edge cases."""

@@ -8,7 +8,9 @@ Coretx is an advanced code localization engine that combines static analysis, dy
 
 ## 📖 About the Name
 
-**coretx** is derived from the abbreviation of "**core context**". Its main function is to quickly construct a graph structure and relationship map of code folders, enabling fast content retrieval and the construction of the minimal logical closure for LLMs to understand the context and provide the most appropriate response.
+**Coretx** is derived from the abbreviation of "**core context**". The name reflects the tool's primary mission: to quickly construct a comprehensive graph structure and relationship map of code repositories, enabling fast content retrieval and the construction of the minimal logical closure necessary for Large Language Models (LLMs) to understand the context and provide the most appropriate responses.
+
+The "core" represents the essential, fundamental elements of a codebase, while "context" (abbreviated as "tx") emphasizes the relational understanding between different code components. Together, Coretx creates the contextual foundation that bridges human intent with machine understanding in code analysis tasks.
 
 ## 📖 About the Name
 
@@ -206,8 +208,8 @@ We welcome contributions! Please see our [Contributing Guidelines](docs/CONTRIBU
 
 ```bash
 # Clone the repository
-git clone https://github.com/Whopus/locagent-kernel.git
-cd locagent-kernel
+git clone https://github.com/Whopus/Coretx.git
+cd Coretx
 
 # Install in development mode
 pip install -e ".[dev]"
@@ -232,8 +234,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- 📖 [Documentation](https://github.com/Whopus/locagent-kernel#readme)
-- 🐛 [Issue Tracker](https://github.com/Whopus/locagent-kernel/issues)
-- 💬 [Discussions](https://github.com/Whopus/locagent-kernel/discussions)
+- 📖 [Documentation](https://github.com/Whopus/Coretx#readme)
+- 🐛 [Issue Tracker](https://github.com/Whopus/Coretx/issues)
+- 💬 [Discussions](https://github.com/Whopus/Coretx/discussions)
 
 ---

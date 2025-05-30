@@ -12,10 +12,6 @@ Coretx is an advanced code localization engine that combines static analysis, dy
 
 The "core" represents the essential, fundamental elements of a codebase, while "context" (abbreviated as "tx") emphasizes the relational understanding between different code components. Together, Coretx creates the contextual foundation that bridges human intent with machine understanding in code analysis tasks.
 
-## 📖 About the Name
-
-**coretx** is derived from the abbreviation of "**core context**". Its main function is to quickly construct a graph structure and relationship map of code folders, enabling fast content retrieval and the construction of the minimal logical closure for LLMs to understand the context and provide the most appropriate response.
-
 ## 🚀 Features
 
 - **Multi-Modal Code Analysis**: Combines AST parsing, dependency graphs, and semantic search

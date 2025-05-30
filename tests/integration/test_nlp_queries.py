@@ -340,7 +340,7 @@ def run_comprehensive_nlp_test():
     print("=" * 60)
     
     # Set up test environment
-    custom_api_key = "sk-Do6vjkCvmwTbWUoSD1E88935470445A6979e0cF3A6Ea1eD7"
+    custom_api_key = "sk-Do6.."
     custom_api_base = "https://ai.comfly.chat/v1/"
     custom_model = "gpt-4.1"
     

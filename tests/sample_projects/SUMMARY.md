@@ -8,7 +8,7 @@ This test project successfully demonstrates the capabilities of **Coretx**, an a
 
 The test project was configured with the following OpenAI API settings as requested:
 
-- **API Key**: `sk-Do6vjkCvmwTbWUoSD1E88935470445A6979e0cF3A6Ea1eD7`
+- **API Key**: `sk-Do6..`
 - **Base URL**: `https://ai.comfly.chat/v1/`
 - **Model**: `gpt-4.1`
 

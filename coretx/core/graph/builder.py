@@ -139,17 +139,41 @@ class GraphBuilder:
             r'^\s*let\s+(\w+)\s*=\s*function\s*\(',  # let name = function()
             r'^\s*var\s+(\w+)\s*=\s*function\s*\(',  # var name = function()
             r'^\s*(\w+)\s*:\s*function\s*\(',  # name: function() (object method)
-            r'^\s*(\w+)\s*\([^)]*\)\s*{',  # name() { (arrow function style)
             r'^\s*const\s+(\w+)\s*=\s*\([^)]*\)\s*=>\s*{',  # const name = () => {
             r'^\s*let\s+(\w+)\s*=\s*\([^)]*\)\s*=>\s*{',  # let name = () => {
             r'^\s*var\s+(\w+)\s*=\s*\([^)]*\)\s*=>\s*{',  # var name = () => {
+            r'^\s*(\w+)\s*\([^)]*\)\s*{',  # name() { (method in class or object)
         ]
         
+        # Keywords to exclude (control structures, not functions)
+        excluded_keywords = {'if', 'else', 'for', 'while', 'switch', 'case', 'try', 'catch', 'finally', 'do', 'with'}
+        
         for line_num, line in enumerate(lines, 1):
+            # Skip lines that are clearly control structures
+            stripped_line = line.strip()
+            if (stripped_line.startswith('if ') or stripped_line.startswith('if(') or
+                stripped_line.startswith('while ') or stripped_line.startswith('while(') or
+                stripped_line.startswith('for ') or stripped_line.startswith('for(') or
+                stripped_line.startswith('switch ') or stripped_line.startswith('switch(') or
+                stripped_line.startswith('} else') or stripped_line.startswith('}else')):
+                continue
+            
             for pattern in function_patterns:
                 match = re.search(pattern, line)
                 if match:
                     func_name = match.group(1)
+                    
+                    # Skip control structures and keywords
+                    if func_name in excluded_keywords:
+                        continue
+                    
+                    # Additional validation for method-like patterns
+                    if pattern == r'^\s*(\w+)\s*\([^)]*\)\s*{':
+                        # This is the broad pattern, add extra validation
+                        if (stripped_line.startswith('if ') or stripped_line.startswith('while ') or
+                            stripped_line.startswith('for ') or stripped_line.startswith('switch ') or
+                            '=' in line.split('(')[0]):  # Skip assignments
+                            continue
                     
                     # Find function end (simplified - just look for closing brace)
                     end_line = self._find_js_block_end(lines, line_num - 1)

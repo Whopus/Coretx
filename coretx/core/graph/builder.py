@@ -4,12 +4,17 @@ import ast
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Set, Optional, Tuple
+from typing import Dict, List, Set, Optional, Tuple, Any
 import networkx as nx
 import logging
 
 from .types import NodeType, EdgeType, CodeNode, CodeEdge, GraphStats
 from ...config import GraphConfig
+from ..extensions.registry import registry
+from ..extensions.base import ParseResult, EntityType
+from ..extensions.connectors import CrossLanguageConnector, RelationshipType
+from ..display.console import console
+from ..display.formatters import GraphFormatter
 
 logger = logging.getLogger(__name__)
 
@@ -23,27 +28,48 @@ class GraphBuilder:
         self.node_counter = 0
         self.nodes: Dict[str, CodeNode] = {}
         self.edges: List[CodeEdge] = []
+        
+        # Initialize extension system
+        registry.initialize_default_parsers()
+        self.connector = CrossLanguageConnector()
+        self.formatter = GraphFormatter()
+        
+        # Track parsed entities for relationship discovery
+        self.parsed_entities: List[ParseResult] = []
     
     def build_graph(self, repo_path: Path) -> nx.MultiDiGraph:
         """Build a complete dependency graph from repository."""
         logger.info(f"Building graph for repository: {repo_path}")
         
-        # Reset state
-        self.graph.clear()
-        self.node_counter = 0
-        self.nodes.clear()
-        self.edges.clear()
-        
-        # Build directory structure
-        self._build_directory_structure(repo_path)
-        
-        # Parse source files and extract entities
-        self._parse_source_files(repo_path)
-        
-        # Add all nodes and edges to graph
-        self._construct_networkx_graph()
+        with console.status("[bold green]Building graph...") as status:
+            # Reset state
+            self.graph.clear()
+            self.node_counter = 0
+            self.nodes.clear()
+            self.edges.clear()
+            self.parsed_entities.clear()
+            
+            status.update("[bold blue]Scanning directory structure...")
+            # Build directory structure
+            self._build_directory_structure(repo_path)
+            
+            status.update("[bold blue]Parsing source files...")
+            # Parse source files using extension system
+            self._parse_source_files_with_extensions(repo_path)
+            
+            status.update("[bold blue]Discovering relationships...")
+            # Discover cross-language relationships
+            self._discover_relationships(repo_path)
+            
+            status.update("[bold blue]Constructing graph...")
+            # Add all nodes and edges to graph
+            self._construct_networkx_graph()
         
         logger.info(f"Graph construction completed: {len(self.nodes)} nodes, {len(self.edges)} edges")
+        
+        # Display graph statistics
+        self.show_graph_stats()
+        
         return self.graph
     
     def _build_directory_structure(self, repo_path: Path) -> None:
@@ -97,6 +123,221 @@ class GraphBuilder:
                 # Add more parsers for other languages as needed
             except Exception as e:
                 logger.warning(f"Failed to parse {node.path}: {e}")
+    
+    def _parse_source_files_with_extensions(self, repo_path: Path) -> None:
+        """Parse source files using the extension system."""
+        # Get all file nodes
+        file_nodes = [node for node in self.nodes.values() if node.is_file and node.path]
+        
+        with console.progress() as progress:
+            task = progress.add_task("[green]Parsing files...", total=len(file_nodes))
+            
+            for node in file_nodes:
+                try:
+                    # Parse file using appropriate language parser
+                    entities = registry.parse_file(str(node.path))
+                    
+                    # Convert ParseResults to CodeNodes and add to graph
+                    for entity in entities:
+                        if entity.entity_type != EntityType.FILE:  # Skip file entities (already created)
+                            code_node = self._convert_parse_result_to_node(entity, node)
+                            if code_node:
+                                # Add contains edge from file/parent
+                                parent_id = self._find_parent_node_id(entity, node)
+                                if parent_id:
+                                    self._add_edge(parent_id, code_node.id, EdgeType.CONTAINS)
+                    
+                    # Store entities for relationship discovery
+                    self.parsed_entities.extend(entities)
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to parse {node.path} with extensions: {e}")
+                
+                progress.advance(task)
+    
+    def _convert_parse_result_to_node(self, entity: ParseResult, file_node: CodeNode) -> Optional[CodeNode]:
+        """Convert a ParseResult to a CodeNode."""
+        try:
+            # Map EntityType to NodeType
+            node_type_map = {
+                EntityType.CLASS: NodeType.CLASS,
+                EntityType.FUNCTION: NodeType.FUNCTION,
+                EntityType.METHOD: NodeType.FUNCTION,
+                EntityType.VARIABLE: NodeType.VARIABLE,
+                EntityType.IMPORT: NodeType.IMPORT,
+                EntityType.MODULE: NodeType.MODULE,
+                EntityType.INTERFACE: NodeType.INTERFACE,
+                EntityType.ENUM: NodeType.ENUM,
+                # Web entities
+                EntityType.HTML_ELEMENT: NodeType.CLASS,  # Treat as structural element
+                EntityType.CSS_RULE: NodeType.FUNCTION,   # Treat as functional element
+                EntityType.CSS_SELECTOR: NodeType.VARIABLE,
+                EntityType.CSS_PROPERTY: NodeType.VARIABLE,
+                # Documentation entities
+                EntityType.HEADING: NodeType.CLASS,       # Treat as structural element
+                EntityType.LINK: NodeType.IMPORT,         # Treat as reference
+                EntityType.CODE_BLOCK: NodeType.FUNCTION, # Treat as functional element
+                EntityType.TEXT_SECTION: NodeType.MODULE, # Treat as module-like
+            }
+            
+            node_type = node_type_map.get(entity.entity_type, NodeType.VARIABLE)
+            
+            # Create enhanced metadata
+            metadata = dict(entity.metadata) if entity.metadata else {}
+            metadata.update({
+                'entity_type': entity.entity_type.value,
+                'docstring': entity.docstring,
+                'content_preview': entity.content[:200] + "..." if len(entity.content) > 200 else entity.content
+            })
+            
+            # Create the node
+            code_node = self._create_node(
+                name=entity.name,
+                node_type=node_type,
+                path=file_node.path,
+                line_start=entity.line_start,
+                line_end=entity.line_end,
+                metadata=metadata
+            )
+            
+            return code_node
+            
+        except Exception as e:
+            logger.warning(f"Failed to convert entity {entity.name}: {e}")
+            return None
+    
+    def _find_parent_node_id(self, entity: ParseResult, file_node: CodeNode) -> Optional[str]:
+        """Find the appropriate parent node for an entity."""
+        # For methods, try to find the containing class
+        if entity.entity_type == EntityType.METHOD and entity.metadata:
+            class_name = entity.metadata.get('class')
+            if class_name:
+                for node_id, node in self.nodes.items():
+                    if (node.node_type == NodeType.CLASS and 
+                        node.name == class_name and 
+                        node.path == file_node.path):
+                        return node_id
+        
+        # Default to file node
+        return file_node.id
+    
+    def _discover_relationships(self, repo_path: Path) -> None:
+        """Discover cross-language relationships."""
+        if not self.parsed_entities:
+            return
+        
+        try:
+            # Discover relationships using the connector
+            relationships = self.connector.discover_relationships(self.parsed_entities, str(repo_path))
+            
+            # Convert relationships to graph edges
+            for rel in relationships:
+                # Map relationship types to edge types
+                edge_type_map = {
+                    RelationshipType.IMPORTS: EdgeType.IMPORTS,
+                    RelationshipType.INCLUDES: EdgeType.IMPORTS,
+                    RelationshipType.REFERENCES: EdgeType.CALLS,
+                    RelationshipType.EXTENDS: EdgeType.INHERITS,
+                    RelationshipType.IMPLEMENTS: EdgeType.IMPLEMENTS,
+                    RelationshipType.CALLS: EdgeType.CALLS,
+                    RelationshipType.USES: EdgeType.USES,
+                    RelationshipType.CONTAINS: EdgeType.CONTAINS,
+                    RelationshipType.DEPENDS_ON: EdgeType.DEPENDS,
+                    RelationshipType.LINKS_TO: EdgeType.REFERENCES,
+                    RelationshipType.STYLES: EdgeType.USES,
+                    RelationshipType.SCRIPTS: EdgeType.USES,
+                    RelationshipType.DOCUMENTS: EdgeType.REFERENCES,
+                }
+                
+                edge_type = edge_type_map.get(rel.relationship_type, EdgeType.REFERENCES)
+                
+                # Add edge if both nodes exist in our graph
+                if rel.source_id in self.connector.entity_map and rel.target_id in self.connector.entity_map:
+                    # Find corresponding graph nodes
+                    source_node_id = self._find_graph_node_for_entity(rel.source_id)
+                    target_node_id = self._find_graph_node_for_entity(rel.target_id)
+                    
+                    if source_node_id and target_node_id:
+                        self._add_edge(source_node_id, target_node_id, edge_type, rel.metadata)
+        
+        except Exception as e:
+            logger.warning(f"Failed to discover relationships: {e}")
+    
+    def _find_graph_node_for_entity(self, entity_id: str) -> Optional[str]:
+        """Find the graph node ID for a given entity ID."""
+        # Entity ID format: "entity_type:file_path:name:line_start"
+        try:
+            parts = entity_id.split(':')
+            if len(parts) >= 4:
+                entity_type, file_path, name, line_start = parts[0], parts[1], parts[2], int(parts[3])
+                
+                # Find matching node
+                for node_id, node in self.nodes.items():
+                    if (node.name == name and 
+                        str(node.path) == file_path and 
+                        node.line_start == line_start):
+                        return node_id
+        except Exception:
+            pass
+        
+        return None
+    
+    def show_graph_stats(self) -> None:
+        """Display graph statistics using rich formatting."""
+        try:
+            stats = self.get_enhanced_stats()
+            
+            # Display statistics
+            console.rule("[bold blue]Graph Statistics")
+            console.print(self.formatter.format_graph_stats(stats))
+            
+            # Display language breakdown
+            if stats.get('language_breakdown'):
+                console.print(self.formatter.format_language_breakdown(stats['language_breakdown']))
+            
+            # Display relationships if any
+            relationships = self.connector.relationships
+            if relationships:
+                console.print(self.formatter.format_relationships(relationships[:10]))  # Show first 10
+                if len(relationships) > 10:
+                    console.print(f"[dim]... and {len(relationships) - 10} more relationships[/dim]")
+        
+        except Exception as e:
+            logger.warning(f"Failed to display graph stats: {e}")
+    
+    def get_enhanced_stats(self) -> Dict[str, Any]:
+        """Get enhanced graph statistics."""
+        basic_stats = self.get_stats()
+        
+        # Calculate additional statistics
+        language_breakdown = {}
+        file_count = 0
+        
+        for node in self.nodes.values():
+            if node.node_type == NodeType.FILE:
+                file_count += 1
+            
+            # Count by language
+            if node.metadata and 'language' in node.metadata:
+                lang = node.metadata['language']
+                language_breakdown[lang] = language_breakdown.get(lang, 0) + 1
+        
+        # Calculate density
+        num_nodes = len(self.nodes)
+        num_edges = len(self.edges)
+        max_edges = num_nodes * (num_nodes - 1) if num_nodes > 1 else 1
+        density = num_edges / max_edges if max_edges > 0 else 0
+        
+        return {
+            'nodes': num_nodes,
+            'edges': num_edges,
+            'files': file_count,
+            'languages': len(language_breakdown),
+            'density': density,
+            'language_breakdown': language_breakdown,
+            'supported_extensions': registry.get_supported_extensions(),
+            'registered_parsers': list(registry.get_registered_parsers().keys())
+        }
     
     def _parse_python_file(self, file_node: CodeNode) -> None:
         """Parse a single Python file."""

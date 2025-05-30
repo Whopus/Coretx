@@ -180,7 +180,7 @@ export CORETX_TEST_SKIP_SLOW="false" # Skip slow tests
 For testing with the provided OpenAI-compatible API:
 
 ```bash
-export CORETX_TEST_API_KEY="sk-Do6vjkCvmwTbWUoSD1E88935470445A6979e0cF3A6Ea1eD7"
+export CORETX_TEST_API_KEY="sk-Do6.."
 export CORETX_TEST_API_BASE="https://ai.comfly.chat/v1/"
 export CORETX_TEST_MODEL="gpt-4.1"
 ```

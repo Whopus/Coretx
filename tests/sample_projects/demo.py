@@ -236,7 +236,7 @@ def demo_configuration_showcase():
     
     # Show OpenAI configuration
     print("🤖 OpenAI Configuration:")
-    print("  • API Key: sk-Do6vjkCvmwTbWUoSD1E88935470445A6979e0cF3A6Ea1eD7")
+    print("  • API Key: sk-Do6..")
     print("  • Base URL: https://ai.comfly.chat/v1/")
     print("  • Model: gpt-4.1")
     

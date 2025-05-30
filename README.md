@@ -1,10 +1,10 @@
-# CoreCtx
+# Coretx
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-CoreCtx is an advanced code localization engine that combines static analysis, dynamic graph construction, and LLM-powered reasoning to precisely identify relevant code sections for bug fixes, feature implementations, and code understanding tasks.
+Coretx is an advanced code localization engine that combines static analysis, dynamic graph construction, and LLM-powered reasoning to precisely identify relevant code sections for bug fixes, feature implementations, and code understanding tasks.
 
 ## 📖 About the Name
 
@@ -28,8 +28,8 @@ pip install coretx
 
 ### From Source
 ```bash
-git clone https://github.com/Whopus/CoreCtx.git
-cd CoreCtx
+git clone https://github.com/Whopus/Coretx.git
+cd Coretx
 pip install -e .
 ```
 
@@ -78,7 +78,7 @@ coretx localize /path/to/repo "Bug description" --config config.yaml
 
 ### OpenAI Configuration
 
-CoreCtx supports multiple ways to configure OpenAI API settings:
+Coretx supports multiple ways to configure OpenAI API settings:
 
 1. **Function Parameters** (highest priority)
 2. **Configuration Files**
@@ -89,7 +89,7 @@ See [OPENAI_CONFIG.md](docs/OPENAI_CONFIG.md) for detailed configuration options
 ### Architecture
 
 ```
-CoreCtx
+Coretx
 ├── Core Components
 │   ├── Graph Builder     # Constructs code dependency graphs
 │   ├── Graph Searcher    # Queries and navigates graphs
@@ -233,5 +233,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - 💬 [Discussions](https://github.com/Whopus/locagent-kernel/discussions)
 
 ---
-
-**LocAgent Kernel** - Intelligent Code Localization for Modern Development

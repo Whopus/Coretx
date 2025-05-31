@@ -6,6 +6,37 @@
 
 > **Coretx** (**Core** Con**tex**t) is an intelligent code analysis engine that builds comprehensive knowledge graphs of your codebase, enabling LLMs to understand and reason about code with minimal context.
 
+## 📚 Table of Contents
+
+- [Philosophy & Design](#-philosophy--design)
+- [Why Coretx?](#-why-coretx)
+- [Key Features](#-key-features)
+- [Architecture Overview](#-architecture-overview)
+- [Installation](#-installation)
+- [Quick Start](#-quick-start)
+- [API Reference](#-api-reference)
+- [Core Concepts](#-core-concepts)
+- [Query Language](#-query-language)
+- [Output Specifications](#-output-specifications)
+- [Advanced Usage](#-advanced-usage)
+- [Performance](#-performance)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+## 🎨 Philosophy & Design
+
+Coretx is built on three fundamental principles:
+
+1. **Semantic First**: Code is more than syntax - it's about meaning, intent, and relationships
+2. **Minimal Context**: LLMs perform best with exactly the right amount of information - no more, no less
+3. **Universal Bridge**: Every codebase, regardless of language or framework, can be understood through a unified semantic model
+
+The engine acts as an intelligent intermediary that:
+- **Understands** your code's structure and semantics
+- **Indexes** relationships and dependencies across languages
+- **Retrieves** minimal logical closures for any query
+- **Formats** context optimally for LLM consumption
+
 ## 🎯 Why Coretx?
 
 When working with Large Language Models on code-related tasks, providing the right context is crucial. Too little context leads to incorrect solutions; too much overwhelms the model. Coretx solves this by:
@@ -17,23 +48,64 @@ When working with Large Language Models on code-related tasks, providing the rig
 
 ## ✨ Key Features
 
-- **🌐 Multi-Language Intelligence**: Analyzes Python, JavaScript/TypeScript, Java, C/C++, HTML/CSS, and more
-- **🔍 Semantic Understanding**: Uses LLMs to understand code relationships beyond syntax
-- **🎯 Precise Localization**: Identifies exact code sections relevant to bugs or features
-- **📊 Rich Visualizations**: Beautiful console output with syntax highlighting and statistics
-- **🔧 Extensible Design**: Easy to add support for new languages and frameworks
+### Core Capabilities
+- **🧠 Semantic Code Understanding**: Uses LLMs to comprehend code intent and relationships
+- **🕸️ Multi-Language Knowledge Graph**: Unified graph across Python, JS/TS, Java, C/C++, Go, Rust, and more
+- **🎯 Surgical Context Extraction**: Returns exactly what's needed - no more, no less
+- **🔍 Intelligent Query Engine**: Natural language queries over your codebase
+- **📊 Rich Visualizations**: Interactive graph visualizations and beautiful terminal output
 
-## ✨ Key Use Cases
+### Advanced Features
+- **🔄 Incremental Updates**: Efficiently update the graph as code changes
+- **🌐 Cross-Language Tracing**: Follow dependencies across language boundaries
+- **🤖 LLM-Optimized Formatting**: Output specifically designed for LLM consumption
+- **📈 Code Intelligence Metrics**: Complexity analysis, coupling detection, and more
+- **🔌 Extensible Architecture**: Plugin system for custom analyzers and formatters
 
-- **🐛 Bug Localization**: "Where is the memory leak in our authentication system?"
-- **✨ Feature Implementation**: "What files need modification to add OAuth support?"
-- **🔍 Code Understanding**: "How does the payment processing flow work?"
-- **♻️ Refactoring Impact**: "What will be affected if I change this API?"
-- **📚 Documentation**: "Generate docs for the user management module"
 
-## 🚀 Quick Start
+## 🏗️ Architecture Overview
 
-### Installation
+```mermaid
+graph TB
+    subgraph "Input Layer"
+        A[Source Code] --> B[Language Parsers]
+        B --> C[AST Generation]
+    end
+    
+    subgraph "Intelligence Layer"
+        C --> D[Entity Extraction]
+        D --> E[LLM Semantic Analysis]
+        E --> F[Relationship Inference]
+    end
+    
+    subgraph "Storage Layer"
+        F --> G[Knowledge Graph]
+        G --> H[Vector Embeddings]
+        H --> I[Index Store]
+    end
+    
+    subgraph "Query Layer"
+        J[Natural Language Query] --> K[Query Parser]
+        K --> L[Graph Traversal]
+        L --> M[Context Assembly]
+        M --> N[LLM-Optimized Output]
+    end
+    
+    I --> L
+    G --> L
+```
+
+### Component Details
+
+1. **Parser Engine**: Tree-sitter based universal parsing with language-specific analyzers
+2. **Semantic Analyzer**: LLM-powered understanding of code semantics and intent
+3. **Graph Engine**: NetworkX-based graph with custom algorithms for code analysis
+4. **Embedding Engine**: Vector representations for semantic search
+5. **Query Processor**: Natural language to graph query translation
+6. **Context Assembler**: Intelligent selection and formatting of relevant code
+
+
+## 🚀 Installation
 
 ```bash
 # From PyPI (coming soon)
@@ -45,50 +117,142 @@ cd Coretx
 pip install -e .
 ```
 
-### Basic Usage
+## 🎯 Quick Start
+
+### Basic Setup
 
 ```python
 from coretx import Coretx
 
-# Initialize with your preferred LLM
-Coretx.init(
+
+# Initialize with your LLM configuration
+ctx = Coretx(
     parser="auto",
     openai_api_key="your-api-key",
     openai_base_url="https://api.openai.com/v1"  # Optional
+    model="gpt-4.1"
 )
 
-# Analyze your codebase
-result = Coretx.analyze(
-    directory="/path/to/your/project",
-    recursive=True
-)
+# Build knowledge graph of your codebase
+graph = ctx.analyze("/path/to/project")
 
-# Find relevant code for a specific problem
-context = Coretx.localize(
-    path="/path/to/your/project",
-    query="Fix memory leak in user authentication"
-)
+# Query the graph
+result = ctx.query(graph, "What does the authentication system do?")
+print(result.summary)
+print(result.code_context)
 ```
 
-### Command Line Interface
+### Command Line Usage
 
 ```bash
-# Initialize Coretx
-coretx init --api-key "your-api-key"
+# Initialize configuration
+coretx init
 
-# Analyze a codebase
-coretx analyze /path/to/project
+# Analyze a project
+coretx analyze /path/to/project --output project.graph
+
+# Query the codebase
+coretx query "Find all API endpoints" --project /path/to/project
 
 # Find relevant code for a problem
 coretx locate /path/to/project "Bug in payment processing"
 
-# Export analysis results
-coretx export /path/to/project --format html --output report.html
+# Interactive mode
+coretx interactive /path/to/project
+```
+
+
+
+## 📖 API Reference
+
+### Core APIs
+
+#### `Coretx` Class
+
+```python
+class Coretx:
+    def __init__(self, parser: str, openai_api_key: str, openai_base_url: str, model: str, **kwargs):
+        """Initialize Coretx with LLM configuration."""
+        
+    def analyze(self, path: str, **options) -> CodeGraph:
+        """Build a semantic knowledge graph of the codebase."""
+        
+    def query(self, question: str, **options) -> QueryResult:
+        """Query the codebase using natural language."""
+        
+    def locate(self, path: str, problem: str) -> ContextResult:
+        """Find minimal code context for a specific problem."""
+        
+    def trace(self, entity: str, direction: str = "both") -> TraceResult:
+        """Trace dependencies of a code entity."""
+```
+
+#### `CodeGraph` Class
+
+```python
+class CodeGraph:
+    @property
+    def nodes(self) -> List[CodeEntity]:
+        """All code entities in the graph."""
+        
+    @property
+    def edges(self) -> List[Relationship]:
+        """All relationships between entities."""
+        
+    def find_entity(self, name: str) -> Optional[CodeEntity]:
+        """Find entity by name or path."""
+        
+    def get_dependencies(self, entity: CodeEntity) -> List[CodeEntity]:
+        """Get all dependencies of an entity."""
+        
+    def get_dependents(self, entity: CodeEntity) -> List[CodeEntity]:
+        """Get all entities that depend on this one."""
+        
+    def subgraph(self, entities: List[CodeEntity]) -> CodeGraph:
+        """Extract a subgraph containing specified entities."""
+```
+
+### Query Result Objects
+
+```python
+@dataclass
+class QueryResult:
+    summary: str                    # Natural language summary
+    code_context: str              # Formatted code context
+    entities: List[CodeEntity]     # Relevant code entities
+    relationships: List[Relationship]  # Relevant relationships
+    confidence: float              # Query confidence score
+    suggestions: List[str]         # Follow-up query suggestions
+    
+@dataclass
+class ContextResult:
+    minimal_closure: str           # Minimal code needed
+    files: List[FileContext]       # File-by-file breakdown
+    entry_points: List[CodeEntity] # Where to start reading
+    flow_diagram: str              # ASCII/mermaid flow diagram
+    fix_suggestions: List[str]     # Potential solutions
+    
+@dataclass
+class CodeEntity:
+    id: str                       # Unique identifier
+    type: EntityType              # class, function, module, etc.
+    name: str                     # Entity name
+    path: str                     # File path
+    line_start: int               # Starting line number
+    line_end: int                 # Ending line number
+    description: str              # Semantic description
+    embedding: np.ndarray         # Vector representation
+    metadata: Dict[str, Any]      # Language-specific metadata
 ```
 
 ## 📚 Core Concepts
+### 1. Semantic Knowledge Graph
 
-### 1. Code Knowledge Graph
+The knowledge graph captures three levels of understanding:
+
+- **Syntactic Level**: AST-based structural relationships
+- **Semantic Level**: LLM-inferred meaning and intent
+- **Pragmatic Level**: Usage patterns and architectural role
 
 Coretx builds a comprehensive graph where:
 - **Nodes** represent code entities (classes, functions, modules)
@@ -97,26 +261,89 @@ Coretx builds a comprehensive graph where:
 
 ### 2. Minimal Logical Closure
 
+When extracting context, Coretx follows the principle of minimal sufficiency:
+
+1. **Identify Focal Points**: Entities directly relevant to the query
+2. **Expand Dependencies**: Include necessary dependencies for understanding
+3. **Prune Redundancy**: Remove anything not essential
+4. **Preserve Coherence**: Ensure the context is self-contained
+
 When you query Coretx, it:
 1. Converts your query to embeddings
 2. Searches the graph for relevant nodes
 3. Expands to include necessary dependencies
 4. Returns the minimal set of code needed for understanding
 
-### 3. LLM-Optimized Output
+### 3. Cross-Language Intelligence
 
-Results are formatted specifically for LLM consumption:
+Coretx understands relationships that span languages:
+
+- API endpoints → Frontend consumers
+- Database schemas → ORM models → API serializers
+- Configuration files → Runtime behavior
+- Build definitions → Deployment artifacts
+
+
+## 🔍 Query Language
+
+### Natural Language Queries
+
+Coretx supports intuitive natural language queries:
+
 ```python
-# === file: src/auth/manager.py ===
-class AuthManager:
-    def authenticate(self, username: str, password: str) -> User:
-        # Current implementation with potential memory leak
-        
-# === file: src/models/user.py (excerpt) ===
-class User:
-    # Only relevant fields shown
+# Architecture queries
+ctx.query("What is the overall architecture of this system?")
+ctx.query("How do the frontend and backend communicate?")
+
+# Bug localization
+ctx.locate("Where might memory leaks occur in the authentication flow?")
+ctx.locate("Find potential SQL injection vulnerabilities")
+
+# Feature analysis
+ctx.query("What files need to change to add OAuth support?")
+ctx.query("How is rate limiting implemented?")
+
+# Code understanding
+ctx.query("Explain the payment processing flow")
+ctx.query("What design patterns are used in this codebase?")
 ```
 
+
+### Structured Queries
+
+For more precise control:
+
+```python
+# Entity-based queries
+ctx.find_entities(
+    type=EntityType.CLASS,
+    name_pattern="*Controller",
+    has_annotation="@RestController"
+)
+
+# Relationship queries
+ctx.find_paths(
+    from_entity="UserService",
+    to_entity="Database",
+    max_depth=5
+)
+```
+
+### Query Modifiers
+
+```python
+# Scope modifiers
+ctx.query("Find all TODOs", scope="file:src/auth/*")
+ctx.query("Security issues", scope="recent_changes")
+
+# Output modifiers
+ctx.query("API endpoints", output_format="openapi")
+ctx.query("Database schema", output_format="mermaid")
+
+# Analysis modifiers
+ctx.query("Performance bottlenecks", analysis_depth="deep")
+ctx.query("Quick code overview", analysis_depth="shallow")
+```
 
 ## 📋 Example Output
 
@@ -227,10 +454,6 @@ backend/
 The memory leak occurs in AuthManager where sessions are stored in an 
 in-memory dictionary but never removed. The logout() method clears the 
 Redis session but not the local dictionary reference.
-
-💡 SUGGESTED FIX:
-Add `del self.sessions[session_id]` in the logout method and implement 
-a session cleanup mechanism for expired sessions.
 ```
 
 ### Cross-Language Dependency Output
@@ -256,7 +479,44 @@ Frontend (TypeScript) → Backend (Python):
 - WebSocket Channels: 3
 ```
 
-## 🛠️ Advanced Features
+### Query Results
+
+# result.entities - List of relevant code entities
+```python
+[
+    CodeEntity(type="class", name="AuthService", path="backend/auth/service.py", line_start=10, line_end=11, description=""),
+    CodeEntity(type="function", name="authenticate", path="backend/auth/service.py", line_start=10, line_end=11, description=""),
+    CodeEntity(type="class", name="AuthToken", path="backend/auth/models.py", line_start=10, line_end=11, description="")
+]
+```
+
+```python
+# result.relationships - Relevant relationships
+[
+    Relationship(from="AuthService", to="UserRepository", type="uses", description=""),
+    Relationship(from="AuthService", to="TokenService", type="uses", description=""),
+    Relationship(from="/api/auth/login", to="AuthService.authenticate", type="calls", description="")
+]
+```
+
+
+### Visualization Outputs
+
+```python
+# Mermaid diagrams
+result = ctx.query("Show authentication flow", output_format="mermaid")
+result.diagram  # Returns mermaid diagram code
+
+# Interactive HTML
+result = ctx.query("Visualize module dependencies", output_format="html")
+result.html  # Returns interactive D3.js visualization
+
+# ASCII diagrams for terminal
+result = ctx.query("Show class hierarchy", output_format="ascii")
+result.ascii_art  # Returns ASCII tree/diagram
+```
+
+## 🛠️ Advanced Usage
 
 ### Multi-Language Project Analysis
 
@@ -288,6 +548,83 @@ class RustParser(BaseParser):
         pass
 
 Coretx.register_parser("rust", RustParser)
+```
+
+
+### Custom Analyzers
+
+```python
+from coretx.analyzers import BaseAnalyzer
+
+class SecurityAnalyzer(BaseAnalyzer):
+    def analyze(self, entity: CodeEntity, graph: CodeGraph) -> Dict[str, Any]:
+        # Custom security analysis logic
+        vulnerabilities = []
+        if "eval(" in entity.content:
+            vulnerabilities.append("Potential code injection")
+        return {"security_issues": vulnerabilities}
+
+# Register analyzer
+ctx.register_analyzer("security", SecurityAnalyzer())
+
+# Use in queries
+result = ctx.query("Security vulnerabilities", analyzers=["security"])
+```
+
+### Graph Manipulation
+
+```python
+# Load existing graph
+graph = CodeGraph.load("project.graph")
+
+# Manual graph operations
+subgraph = graph.extract_subgraph(
+    center="PaymentService",
+    radius=2,
+    edge_types=["calls", "imports"]
+)
+
+# Graph algorithms
+critical_paths = graph.find_critical_paths()
+circular_deps = graph.find_circular_dependencies()
+god_classes = graph.find_god_classes(threshold=20)
+
+# Export for external tools
+graph.export("project.graphml", format="graphml")
+graph.export("project.json", format="cytoscape")
+```
+
+### Incremental Analysis
+
+```python
+# Initial analysis
+graph = ctx.analyze("/project", cache_dir=".coretx-cache")
+
+# Incremental update after code changes
+changes = ctx.detect_changes("/project", since="2 hours ago")
+graph = ctx.update_graph(graph, changes)
+
+# Differential analysis
+impact = ctx.analyze_impact(
+    changed_files=["src/auth/service.py"],
+    impact_types=["api_changes", "breaking_changes"]
+)
+```
+
+### Optimization Tips
+
+```python
+# Use incremental analysis for large codebases
+ctx.analyze(path, incremental=True)
+
+# Limit analysis depth for quick overview
+ctx.analyze(path, max_depth=3, skip_tests=True)
+
+# Cache embeddings for faster queries
+ctx.configure(embedding_cache_size=10000)
+
+# Parallel processing
+ctx.analyze(path, num_workers=8)
 ```
 
 ## 📊 How It Works

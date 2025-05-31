@@ -1,7 +1,6 @@
 # Coretx
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 Coretx is an advanced multi-language code analysis engine that combines static analysis, dynamic graph construction, and LLM-powered reasoning to precisely identify relevant code sections for bug fixes, feature implementations, and code understanding tasks across diverse technology stacks.
@@ -16,8 +15,8 @@ The "core" represents the essential, fundamental elements of a codebase, while "
 
 ### 🌐 Multi-Language Support
 - **Programming Languages**: Python, JavaScript/TypeScript, Java, C/C++
-- **Web Technologies**: HTML, CSS, SCSS/SASS, Less
-- **Documentation**: Markdown, reStructuredText
+- **Web Technologies**: HTML, CSS
+- **Documentation**: Markdown
 - **Configuration**: JSON, YAML, XML
 - **Universal Extension System**: Easy to add support for new languages
 
@@ -26,7 +25,6 @@ The "core" represents the essential, fundamental elements of a codebase, while "
 - **Cross-Language Relationships**: Discovers connections between different file types
 - **Dependency Graph Construction**: Maps imports, includes, and references
 - **Semantic Entity Extraction**: Classes, functions, methods, variables, and more
-- **Web Asset Relationships**: CSS-HTML styling, JavaScript-HTML scripting connections
 
 ### 🎨 Rich Display & Visualization
 - **Beautiful Console Output**: Rich formatting with colors, tables, and progress bars
@@ -63,36 +61,30 @@ Coretx provides comprehensive support for analyzing projects with multiple progr
 | Category | Languages/Technologies | File Extensions |
 |----------|----------------------|-----------------|
 | **Programming** | Python, JavaScript, TypeScript | `.py`, `.js`, `.ts`, `.jsx`, `.tsx` |
-| **Web Frontend** | HTML, CSS, SCSS, SASS, Less | `.html`, `.css`, `.scss`, `.sass`, `.less` |
-| **Documentation** | Markdown, reStructuredText | `.md`, `.rst`, `.markdown` |
+| **Web Frontend** | HTML, CSS, SCSS, SASS, Less | `.html`, `.css` |
+| **Documentation** | Markdown, reStructuredText | `.md`|
 | **Configuration** | JSON, YAML, XML | `.json`, `.yaml`, `.yml`, `.xml` |
 
-### Entity Types Extracted
-
-- **Code Entities**: Classes, functions, methods, variables, imports, modules
-- **Web Entities**: HTML elements, CSS rules, selectors, properties
-- **Documentation**: Headings, code blocks, links, text sections
-- **Relationships**: Cross-language dependencies, styling connections, script references
 
 ## 🚀 Quick Start
 
 ### Multi-Language Project Analysis
 
 ```python
-from coretx.core.extensions.registry import registry
-from coretx.core.agent.enhanced_tools import enhanced_tools
+from coretx import Coretx
 
 # Initialize the multi-language system
-registry.initialize_default_parsers()
+Coretx.init(parser="auto")
 
 # Analyze a directory with multiple languages
-result = enhanced_tools.tools['analyze_directory'](
-    directory_path="/path/to/your/project",
+result = Coretx.ctx_dir(
+    directory="/path/to/your/project",
     recursive=True,
     show_stats=True
 )
 
 print(f"Found {result['total_entities']} entities across {result['files_processed']} files")
+print(f"Found {result['total_relationships']} entities across {result['files_processed']} files")
 print(f"Languages detected: {list(result['language_stats'].keys())}")
 ```
 
@@ -100,19 +92,19 @@ print(f"Languages detected: {list(result['language_stats'].keys())}")
 
 ```python
 # Parse a Python file
-python_result = enhanced_tools.tools['parse_file'](
+python_result = Coretx.ctx_file(
     file_path="app.py",
     show_content=True
 )
 
 # Parse a JavaScript file
-js_result = enhanced_tools.tools['parse_file'](
+js_result = Coretx.ctx_file(
     file_path="script.js",
     show_content=True
 )
 
 # Parse an HTML file
-html_result = enhanced_tools.tools['parse_file'](
+html_result = Coretx.ctx_file(
     file_path="index.html",
     show_content=True
 )
@@ -122,8 +114,8 @@ html_result = enhanced_tools.tools['parse_file'](
 
 ```python
 # Find relationships between different file types
-relationships = enhanced_tools.tools['discover_relationships'](
-    directory_path="/path/to/your/project",
+relationships = Coretx.ctx_cross(
+    directory="/path/to/your/project",
     show_details=True
 )
 
@@ -131,40 +123,141 @@ print(f"Discovered {relationships['total_relationships']} relationships")
 print("Relationship types:", relationships['relationship_types'])
 ```
 
-### Traditional Code Localization
+### Code Localization
 
 ```python
-from coretx import quick_localize
+from coretx import Coretx
+
+# Initialize the multi-language system
+Coretx.init(parser="auto")
+
+# Initialize the code directory
+result = Coretx.ctx_dir(
+    directory="/path/to/your/project",
+    recursive=True,
+    show_stats=True
+)
 
 # Basic usage
-results = quick_localize(
-    repo_path="/path/to/your/repo",
+result = Coretx.localize(
+    path="/path/to/your/project",
     problem_description="Memory leak in user authentication"
 )
 
 # With custom OpenAI configuration
-results = quick_localize(
-    repo_path="/path/to/your/repo",
+Coretx.init(
+    parser="auto",
+    openai_api_key="your-api-key",
+    openai_base_url="base_url"
+)
+# or 
+result = Coretx.localize(
+    path="/path/to/your/project",
     problem_description="Bug in payment processing",
     openai_api_key="your-api-key",
-    openai_base_url="https://api.openai.com/v1"
+    openai_base_url="base_url"
 )
-
-print("Relevant files:")
-for file_path, relevance in results.items():
-    print(f"  {file_path}: {relevance:.2f}")
 ```
+
+### Localization Result
+
+#### 1. Problem Statement
+Begin with a clear description of what users're trying to accomplish, what's not working, or what needs to be modified:
+- "I need to add authentication to this API endpoint"
+- "This function is throwing an error when processing large files"
+- "I want to refactor this component to use hooks instead of classes"
+
+#### 2. Minimal Logical Closure
+
+##### Core Files First
+Include the primary file(s) where the work needs to be done, showing:
+```typescript
+// src/api/users.controller.ts
+export class UsersController {
+  async getUser(id: string) {
+    // Current implementation
+  }
+  
+  // TODO: Add authentication here
+  async updateUser(id: string, data: UserDto) {
+    // ...
+  }
+}
+```
+
+##### Dependencies and Interfaces
+Include just the relevant parts of imported files:
+```typescript
+// src/types/user.types.ts (relevant excerpt)
+export interface User {
+  id: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface UserDto {
+  email?: string;
+  name?: string;
+}
+```
+
+#### Project Structure Overview
+A brief tree view helps llm understand the architecture:
+```
+src/
+├── api/
+│   ├── users.controller.ts    ← main file
+│   └── auth.middleware.ts      ← related
+├── services/
+│   └── users.service.ts        ← dependency
+├── types/
+│   └── user.types.ts          ← interfaces
+└── utils/
+    └── validation.ts          ← if relevant
+```
+
+#### 3. Ideal Format and Organization
+
+### Clear File Markers
+```python
+# === file: src/models/user.py ===
+class User(BaseModel):
+    id: int
+    email: str
+    
+# === file: src/api/routes.py ===
+@router.post("/users")
+async def create_user(user: UserCreate):
+    # implementation
+```
+
+### Include Relevant Configuration
+If the issue involves configuration, show relevant excerpts:
+```json
+// package.json (relevant parts only)
+{
+  "dependencies": {
+    "express": "^4.18.0",
+    "typeorm": "^0.3.0"
+  }
+}
+```
+
+
 
 ### Command Line Interface
 
 ```bash
+# Init
+coretx init --parser "auto" \
+  --openai-api-key "your-key" \
+  --openai-base-url "base_url"
+
+# Analysis
+coretx ctx_dir /path/to/repo
+
 # Basic localization
 coretx localize /path/to/repo "Bug in authentication system"
-
-# With custom OpenAI configuration
-coretx localize /path/to/repo "Memory leak" \
-  --openai-api-key "your-key" \
-  --openai-base-url "https://api.openai.com/v1"
 
 # Using configuration file
 coretx localize /path/to/repo "Bug description" --config config.yaml
@@ -209,9 +302,9 @@ Coretx
 ```yaml
 # config.yaml
 agent:
-  model_name: "gpt-4"
+  model_name: "gpt-4.1"
   api_key: "your-api-key-here"
-  api_base: "https://api.openai.com/v1"
+  api_base: "base_url"
   temperature: 0.1
 
 search:
@@ -230,86 +323,21 @@ export OPENAI_API_KEY="your-api-key"
 export OPENAI_BASE_URL="https://api.openai.com/v1"
 ```
 
-## 🧪 Examples
+## 🧪 Explain
+Coretx will create a `.locator` folder in the directory that needs to be analyzed, which records the graph structure of the entire codebase as well as other analyzable information. coretx uses large language models to analyze the relationships between different nodes (such as classes and methods), and describes the logic layer and code layer in natural language. It then uses a text embedding model to convert these descriptions into embeddings, which are stored as relationships in the graph structure. When a query is made, the query is converted into an embedding, and then a minimal logical closure algorithm is used to index and construct an optimal contextual subgraph. All key information and content are extracted and output in an LLM-friendly format, making it easy to generate documentation or complete tasks.
 
-### Advanced Usage
-
-```python
-from coretx import create_locator, LocAgentConfig
-
-# Create custom configuration
-config = LocAgentConfig()
-config.agent.model_name = "gpt-4"
-config.agent.api_key = "your-key"
-config.search.max_results = 100
-
-# Create locator with custom config
-locator = create_locator("/path/to/repo", config=config)
-
-# Perform multiple localizations
-bug_results = locator.localize("Authentication bug")
-feature_results = locator.localize("Add payment integration")
-
-# Get repository statistics
-stats = locator.get_stats()
-print(f"Files analyzed: {stats['total_files']}")
-print(f"Dependencies found: {stats['total_dependencies']}")
-```
-
-### Custom Endpoints
-
-```python
-# Azure OpenAI
-results = quick_localize(
-    repo_path="/path/to/repo",
-    problem_description="Bug description",
-    openai_api_key="your-azure-key",
-    openai_base_url="https://your-resource.openai.azure.com/openai/deployments/your-deployment"
-)
-
-# Other OpenAI-compatible APIs
-results = quick_localize(
-    repo_path="/path/to/repo",
-    problem_description="Bug description",
-    openai_api_key="your-api-key",
-    openai_base_url="https://your-custom-endpoint.com/v1"
-)
-```
 
 ## 🧪 Testing
 
 ```bash
 # Run all tests
 python -m pytest tests/
-
-# Run specific test modules
-python tests/test_config.py
-python tests/test_setup.py
-
-# Run with coverage (if pytest-cov is installed)
-pytest --cov=coretx tests/
 ```
 
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](docs/CONTRIBUTING.md) for details.
 
-### Development Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/Whopus/Coretx.git
-cd Coretx
-
-# Install in development mode
-pip install -e ".[dev]"
-
-# Install pre-commit hooks
-pre-commit install
-
-# Run tests
-pytest
-```
 
 ## 📄 License
 

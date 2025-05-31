@@ -64,7 +64,7 @@ When working with Large Language Models on code-related tasks, providing the rig
 
 
 ## 🏗️ Architecture Overview
-
+### Diagram
 ```mermaid
 graph TB
     subgraph "Input Layer"
@@ -130,7 +130,8 @@ ctx = Coretx(
     parser="auto",
     openai_api_key="your-api-key",
     openai_base_url="https://api.openai.com/v1"  # Optional
-    model="gpt-4.1"
+    model="gpt-4.1",
+    embedding_model="text-embedding-small"
 )
 
 # Build knowledge graph of your codebase
@@ -138,8 +139,35 @@ graph = ctx.analyze("/path/to/project")
 
 # Query the graph
 result = ctx.query(graph, "What does the authentication system do?")
+# or result = ctx.query("/path/to/project", "What does the authentication system do?"), graph will auto save in /path/to/project
 print(result.summary)
 print(result.code_context)
+
+# Get minimal code context for solving problems
+context = coretx.locate(graph, "Fix memory leak in user authentication")
+
+# Trace dependencies across languages
+deps = coretx.trace("PaymentService", direction="both")
+```
+
+### Load Existing Graph
+```python
+from coretx import Coretx, CodeGraph
+
+# Initialize with your LLM configuration
+ctx = Coretx(
+    parser="auto",
+    openai_api_key="your-api-key",
+    openai_base_url="https://api.openai.com/v1"  # Optional
+    model="gpt-4.1",
+    embedding_model="text-embedding-small"
+)
+
+# Load existing graph
+graph = CodeGraph("/path/to/project")
+
+# Query the graph
+result = ctx.query(graph, "What does the authentication system do?")
 ```
 
 ### Command Line Usage
@@ -149,10 +177,10 @@ print(result.code_context)
 coretx init
 
 # Analyze a project
-coretx analyze /path/to/project --output project.graph
+coretx analyze /path/to/project
 
 # Query the codebase
-coretx query "Find all API endpoints" --project /path/to/project
+coretx query /path/to/project "Find all API endpoints"
 
 # Find relevant code for a problem
 coretx locate /path/to/project "Bug in payment processing"
@@ -243,6 +271,17 @@ class CodeEntity:
     description: str              # Semantic description
     embedding: np.ndarray         # Vector representation
     metadata: Dict[str, Any]      # Language-specific metadata
+
+@dataclass
+class Relationship:
+    id: str                       # Unique identifier
+    type: RelationshipType        # import, invoke, call
+    name: str                     # Entity name
+    from: str                     # from file
+    to: str                       # to file
+    description: str              # Semantic description
+    embedding: np.ndarray         # Vector representation
+    metadata: Dict[str, Any]      # Language-specific metadata
 ```
 
 ## 📚 Core Concepts
@@ -298,14 +337,6 @@ ctx.query("How do the frontend and backend communicate?")
 # Bug localization
 ctx.locate("Where might memory leaks occur in the authentication flow?")
 ctx.locate("Find potential SQL injection vulnerabilities")
-
-# Feature analysis
-ctx.query("What files need to change to add OAuth support?")
-ctx.query("How is rate limiting implemented?")
-
-# Code understanding
-ctx.query("Explain the payment processing flow")
-ctx.query("What design patterns are used in this codebase?")
 ```
 
 
@@ -518,24 +549,6 @@ result.ascii_art  # Returns ASCII tree/diagram
 
 ## 🛠️ Advanced Usage
 
-### Multi-Language Project Analysis
-
-```python
-# Analyze a full-stack project
-analysis = Coretx.analyze(
-    directory="/path/to/fullstack-app",
-    languages=["python", "typescript", "html"],
-    include_tests=True,
-    max_depth=5
-)
-
-# Find cross-language dependencies
-deps = Coretx.trace_dependencies(
-    from_file="backend/api/users.py",
-    to_language="typescript"
-)
-```
-
 ### Custom Language Support
 
 ```python
@@ -691,7 +704,7 @@ export CORETX_CACHE_DIR="~/.coretx/cache"
 ### Performance Characteristics
 
 - **Initial Analysis**: O(n) where n is the number of files
-- **Graph Construction**: O(n²) for relationship discovery
+- **Graph Construction**: O(nlog n) for relationship discovery
 - **Query Time**: O(log n) with indexed embeddings
 - **Memory Usage**: ~100MB per 10,000 files
 
@@ -717,25 +730,6 @@ We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for:
 - [Refactoring with Coretx](examples/refactoring-guide.md)
 - [Custom Parser Development](examples/custom-parser.md)
 
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Issue**: "No module named 'tree_sitter_python'"
-```bash
-# Solution: Install language parsers
-pip install tree-sitter-languages
-```
-
-**Issue**: Large projects taking too long
-```python
-# Solution: Use incremental analysis
-Coretx.analyze(
-    directory="/large/project",
-    incremental=True,
-    cache_dir=".coretx-cache"
-)
-```
 
 ## 📄 License
 

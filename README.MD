@@ -737,10 +737,29 @@ We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for:
 
 ## 📚 Examples & Tutorials
 
-- [Analyzing a Django Project](examples/django-analysis.md)
-- [Finding Security Vulnerabilities](examples/security-scan.md)
-- [Refactoring with Coretx](examples/refactoring-guide.md)
-- [Custom Parser Development](examples/custom-parser.md)
+### Demo & Examples
+- **[Complete Demo](demo.py)** - Comprehensive demonstration of Coretx capabilities
+- **[Snake Game Example](examples/snake_game/)** - Complete Python game for testing analysis
+- **[Query Testing](tests/test_query_capabilities.py)** - Various query patterns and capabilities
+
+### Running Examples
+```bash
+# Run the complete demo
+python demo.py
+
+# Analyze the Snake Game example
+python -m coretx analyze examples/snake_game
+
+# Test query capabilities
+python -m pytest tests/test_query_capabilities.py -v
+```
+
+### Example Analysis Results
+The Snake Game example demonstrates:
+- **Fast Analysis**: ~0.038 seconds for 2,706 lines of code
+- **Comprehensive Extraction**: 123 entities, 120 relationships
+- **Pattern Detection**: Strategy pattern, Manager pattern, inheritance
+- **Architecture Mapping**: 18 classes, 11 functions, 63 methods across 4 files
 
 
 ## 📄 License

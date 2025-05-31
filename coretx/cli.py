@@ -1,340 +1,456 @@
-"""Command-line interface for LocAgent Kernel."""
+"""
+Command-line interface for Coretx.
+"""
 
-import argparse
-import json
+import os
 import sys
+import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 
-from . import CodeLocator, LocAgentConfig, quick_localize
-from .utils import load_config, save_config, setup_logger
+import click
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.syntax import Syntax
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.tree import Tree
 
-
-def create_parser() -> argparse.ArgumentParser:
-    """Create command-line argument parser."""
-    parser = argparse.ArgumentParser(
-        description="LocAgent Kernel - Code Localization Engine",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Quick localization
-  locagent localize /path/to/repo "Bug in authentication"
-  
-  # Use custom OpenAI configuration
-  locagent localize /path/to/repo "Memory leak" --openai-api-key sk-... --openai-base-url https://api.openai.com/v1
-  
-  # Use custom configuration file
-  locagent localize /path/to/repo "Memory leak" --config config.yaml
-  
-  # Search codebase
-  locagent search /path/to/repo "OAuth token" --type hybrid
-  
-  # Initialize repository (build indices)
-  locagent init /path/to/repo --config config.yaml
-  
-  # Get repository statistics
-  locagent stats /path/to/repo
-        """
-    )
-    
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
-    
-    # Localize command
-    localize_parser = subparsers.add_parser('localize', help='Perform code localization')
-    localize_parser.add_argument('repo_path', help='Path to repository')
-    localize_parser.add_argument('problem', help='Problem description')
-    localize_parser.add_argument('--config', '-c', help='Configuration file path')
-    localize_parser.add_argument('--model', '-m', default='gpt-4', help='LLM model name')
-    localize_parser.add_argument('--openai-api-key', help='OpenAI API key (overrides environment)')
-    localize_parser.add_argument('--openai-base-url', help='OpenAI base URL (for custom endpoints)')
-    localize_parser.add_argument('--output', '-o', help='Output file for results')
-    localize_parser.add_argument('--context', help='Additional repository context')
-    localize_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
-    
-    # Search command
-    search_parser = subparsers.add_parser('search', help='Search codebase')
-    search_parser.add_argument('repo_path', help='Path to repository')
-    search_parser.add_argument('query', help='Search query')
-    search_parser.add_argument('--type', '-t', choices=['text', 'graph', 'hybrid', 'structure'], 
-                              default='hybrid', help='Search type')
-    search_parser.add_argument('--top-k', '-k', type=int, default=10, help='Number of results')
-    search_parser.add_argument('--config', '-c', help='Configuration file path')
-    search_parser.add_argument('--output', '-o', help='Output file for results')
-    
-    # Initialize command
-    init_parser = subparsers.add_parser('init', help='Initialize repository (build indices)')
-    init_parser.add_argument('repo_path', help='Path to repository')
-    init_parser.add_argument('--config', '-c', help='Configuration file path')
-    init_parser.add_argument('--force', '-f', action='store_true', help='Force rebuild indices')
-    
-    # Stats command
-    stats_parser = subparsers.add_parser('stats', help='Get repository statistics')
-    stats_parser.add_argument('repo_path', help='Path to repository')
-    stats_parser.add_argument('--config', '-c', help='Configuration file path')
-    
-    # Config command
-    config_parser = subparsers.add_parser('config', help='Configuration management')
-    config_subparsers = config_parser.add_subparsers(dest='config_action')
-    
-    # Create default config
-    create_config_parser = config_subparsers.add_parser('create', help='Create default configuration')
-    create_config_parser.add_argument('output_path', help='Output configuration file path')
-    create_config_parser.add_argument('--format', choices=['yaml', 'json'], default='yaml', 
-                                     help='Configuration format')
-    
-    # Validate config
-    validate_config_parser = config_subparsers.add_parser('validate', help='Validate configuration')
-    validate_config_parser.add_argument('config_path', help='Configuration file path')
-    
-    return parser
+from . import Coretx
+from .models import LLMConfig, AnalysisConfig
 
 
-def load_configuration(config_path: Optional[str]) -> LocAgentConfig:
-    """Load configuration from file or create default."""
-    if config_path:
-        config = load_config(config_path)
-        if config is None:
-            print(f"Error: Failed to load configuration from {config_path}")
-            sys.exit(1)
-        return config
-    else:
-        return LocAgentConfig()
+console = Console()
 
 
-def save_results(results: dict, output_path: str) -> None:
-    """Save results to file."""
+@click.group()
+@click.version_option()
+def main():
+    """Coretx - Intelligent Code Context Engine"""
+    pass
+
+
+@main.command()
+@click.option('--api-key', help='OpenAI API key')
+@click.option('--model', default='gpt-4', help='LLM model to use')
+@click.option('--embedding-model', default='text-embedding-3-small', help='Embedding model to use')
+def init(api_key: Optional[str], model: str, embedding_model: str):
+    """Initialize Coretx configuration."""
+    config_dir = Path.home() / '.coretx'
+    config_dir.mkdir(exist_ok=True)
+    config_file = config_dir / 'config.yaml'
+    
+    # Get API key
+    if not api_key:
+        api_key = click.prompt('OpenAI API Key', hide_input=True)
+    
+    # Create config
+    config = {
+        'llm': {
+            'provider': 'openai',
+            'api_key': api_key,
+            'model': model,
+            'embedding_model': embedding_model,
+            'temperature': 0.1
+        },
+        'analysis': {
+            'max_file_size': 1048576,
+            'ignore_patterns': [
+                '*.test.js',
+                '*.spec.py',
+                '__pycache__',
+                'node_modules',
+                '.git'
+            ],
+            'include_hidden': False
+        },
+        'output': {
+            'syntax_highlighting': True,
+            'max_context_size': 8000,
+            'format': 'markdown'
+        }
+    }
+    
+    # Save config
+    import yaml
+    with open(config_file, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False)
+    
+    console.print(f"✅ Configuration saved to {config_file}", style="green")
+
+
+@main.command()
+@click.argument('path', type=click.Path(exists=True))
+@click.option('--incremental', is_flag=True, help='Perform incremental analysis')
+@click.option('--max-depth', type=int, default=5, help='Maximum analysis depth')
+@click.option('--languages', help='Comma-separated list of languages to analyze')
+@click.option('--output', help='Output file for graph export')
+def analyze(path: str, incremental: bool, max_depth: int, languages: Optional[str], output: Optional[str]):
+    """Analyze a codebase and build knowledge graph."""
     try:
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(results, f, indent=2, default=str)
-        print(f"Results saved to {output_path}")
+        # Initialize Coretx
+        ctx = _get_coretx_instance()
+        
+        # Parse languages
+        language_list = None
+        if languages:
+            language_list = [lang.strip() for lang in languages.split(',')]
+        
+        # Show project info
+        from .utils.file_utils import FileScanner
+        scanner = FileScanner(AnalysisConfig())
+        project_info = scanner.get_project_info(Path(path))
+        
+        _display_project_info(project_info)
+        
+        # Analyze
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            task = progress.add_task("Analyzing codebase...", total=None)
+            
+            graph = ctx.analyze(
+                path,
+                incremental=incremental,
+                max_depth=max_depth,
+                languages=language_list
+            )
+        
+        # Display results
+        stats = graph.get_graph_stats()
+        _display_analysis_results(stats)
+        
+        # Export if requested
+        if output:
+            format_type = Path(output).suffix.lstrip('.')
+            if format_type in ['json', 'graphml', 'gexf']:
+                ctx.export_graph(graph, output, format_type)
+                console.print(f"✅ Graph exported to {output}", style="green")
+        
     except Exception as e:
-        print(f"Error saving results: {e}")
+        console.print(f"❌ Analysis failed: {e}", style="red")
+        sys.exit(1)
 
 
-def cmd_localize(args) -> None:
-    """Handle localize command."""
-    print(f"Localizing code in {args.repo_path}")
-    print(f"Problem: {args.problem}")
+@main.command()
+@click.argument('path', type=click.Path(exists=True))
+@click.argument('question')
+@click.option('--max-results', type=int, default=10, help='Maximum number of results')
+@click.option('--format', 'output_format', type=click.Choice(['text', 'json', 'markdown']), 
+              default='text', help='Output format')
+def query(path: str, question: str, max_results: int, output_format: str):
+    """Query the codebase using natural language."""
+    try:
+        ctx = _get_coretx_instance()
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            task = progress.add_task("Processing query...", total=None)
+            result = ctx.query(path, question, max_results=max_results)
+        
+        _display_query_result(result, output_format)
+        
+    except Exception as e:
+        console.print(f"❌ Query failed: {e}", style="red")
+        sys.exit(1)
+
+
+@main.command()
+@click.argument('path', type=click.Path(exists=True))
+@click.argument('problem')
+@click.option('--format', 'output_format', type=click.Choice(['text', 'json', 'markdown']), 
+              default='text', help='Output format')
+def locate(path: str, problem: str, output_format: str):
+    """Find relevant code for a specific problem."""
+    try:
+        ctx = _get_coretx_instance()
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            task = progress.add_task("Locating code...", total=None)
+            result = ctx.locate(path, problem)
+        
+        _display_context_result(result, output_format)
+        
+    except Exception as e:
+        console.print(f"❌ Code location failed: {e}", style="red")
+        sys.exit(1)
+
+
+@main.command()
+@click.argument('path', type=click.Path(exists=True))
+@click.argument('entity')
+@click.option('--direction', type=click.Choice(['forward', 'backward', 'both']), 
+              default='both', help='Trace direction')
+@click.option('--max-depth', type=int, default=3, help='Maximum trace depth')
+def trace(path: str, entity: str, direction: str, max_depth: int):
+    """Trace dependencies of a code entity."""
+    try:
+        ctx = _get_coretx_instance()
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            task = progress.add_task("Tracing dependencies...", total=None)
+            result = ctx.trace(path, entity, direction, max_depth)
+        
+        _display_trace_result(result)
+        
+    except Exception as e:
+        console.print(f"❌ Dependency tracing failed: {e}", style="red")
+        sys.exit(1)
+
+
+@main.command()
+@click.argument('path', type=click.Path(exists=True))
+def interactive(path: str):
+    """Start interactive query session."""
+    try:
+        ctx = _get_coretx_instance()
+        
+        # Load or analyze graph
+        console.print("🔍 Loading knowledge graph...", style="blue")
+        graph = ctx._load_or_analyze_graph(path)
+        stats = graph.get_graph_stats()
+        
+        console.print(f"✅ Loaded graph with {stats.total_entities} entities", style="green")
+        console.print("\n💡 Enter your questions (type 'exit' to quit, 'help' for commands)")
+        
+        while True:
+            try:
+                question = click.prompt("\n❓ Query", type=str)
+                
+                if question.lower() in ['exit', 'quit', 'q']:
+                    break
+                elif question.lower() == 'help':
+                    _show_interactive_help()
+                    continue
+                elif question.lower().startswith('trace '):
+                    entity_name = question[6:].strip()
+                    result = ctx.trace(graph, entity_name)
+                    _display_trace_result(result)
+                elif question.lower().startswith('locate '):
+                    problem = question[7:].strip()
+                    result = ctx.locate(graph, problem)
+                    _display_context_result(result, 'text')
+                else:
+                    result = ctx.query(graph, question)
+                    _display_query_result(result, 'text')
+                    
+            except KeyboardInterrupt:
+                break
+            except Exception as e:
+                console.print(f"❌ Error: {e}", style="red")
+        
+        console.print("\n👋 Goodbye!", style="blue")
+        
+    except Exception as e:
+        console.print(f"❌ Interactive session failed: {e}", style="red")
+        sys.exit(1)
+
+
+@main.command()
+@click.argument('path', type=click.Path(exists=True))
+def stats(path: str):
+    """Show statistics about the knowledge graph."""
+    try:
+        ctx = _get_coretx_instance()
+        graph_stats = ctx.get_stats(path)
+        _display_analysis_results(graph_stats)
+        
+    except Exception as e:
+        console.print(f"❌ Failed to get stats: {e}", style="red")
+        sys.exit(1)
+
+
+def _get_coretx_instance() -> Coretx:
+    """Get configured Coretx instance."""
+    config_file = Path.home() / '.coretx' / 'config.yaml'
     
-    if args.config:
-        config = load_configuration(args.config)
-        config.agent.model_name = args.model
-        
-        # Apply OpenAI configuration if provided
-        if hasattr(args, 'openai_api_key') and args.openai_api_key:
-            config.agent.api_key = args.openai_api_key
-        if hasattr(args, 'openai_base_url') and args.openai_base_url:
-            config.agent.api_base = args.openai_base_url
-        
-        locator = CodeLocator(config)
-        locator.initialize(args.repo_path)
-        
-        results = locator.localize(
-            problem_description=args.problem,
-            repository_context=args.context or ""
-        )
+    if config_file.exists():
+        return Coretx.from_config(str(config_file))
     else:
-        # Quick localization
-        results = quick_localize(
-            repo_path=args.repo_path,
-            problem_description=args.problem,
-            model_name=args.model,
-            openai_api_key=getattr(args, 'openai_api_key', None),
-            openai_base_url=getattr(args, 'openai_base_url', None)
+        # Use environment variables or defaults
+        return Coretx(
+            openai_api_key=os.getenv('OPENAI_API_KEY'),
+            openai_base_url=os.getenv('OPENAI_BASE_URL'),
+            model=os.getenv('CORETX_MODEL', 'gpt-4'),
+            embedding_model=os.getenv('CORETX_EMBEDDING_MODEL', 'text-embedding-3-small')
         )
-    
-    # Display results
-    loc_results = results.get('localization_results', {})
-    
-    print("\n=== Localization Results ===")
-    
-    files = loc_results.get('files', [])
-    if files:
-        print(f"\nRelevant Files ({len(files)}):")
-        for file in files:
-            print(f"  • {file}")
-    
-    classes = loc_results.get('classes', [])
-    if classes:
-        print(f"\nRelevant Classes ({len(classes)}):")
-        for cls in classes:
-            print(f"  • {cls}")
-    
-    functions = loc_results.get('functions', [])
-    if functions:
-        print(f"\nRelevant Functions ({len(functions)}):")
-        for func in functions:
-            print(f"  • {func}")
-    
-    print(f"\nIterations: {results.get('iterations', 0)}")
-    print(f"Total tokens: {results.get('total_tokens', 0)}")
-    
-    if args.verbose:
-        print("\n=== Conversation History ===")
-        for i, msg in enumerate(results.get('conversation', [])):
-            print(f"\n{i+1}. {msg['role'].upper()}:")
-            content = msg['content']
-            if len(content) > 200:
-                content = content[:200] + "..."
-            print(f"   {content}")
-    
-    # Save results if requested
-    if args.output:
-        save_results(results, args.output)
 
 
-def cmd_search(args) -> None:
-    """Handle search command."""
-    print(f"Searching in {args.repo_path}")
-    print(f"Query: {args.query}")
-    print(f"Search type: {args.type}")
+def _display_project_info(info: Dict[str, Any]) -> None:
+    """Display project information."""
+    table = Table(title="Project Information")
+    table.add_column("Property", style="cyan")
+    table.add_column("Value", style="white")
     
-    config = load_configuration(args.config)
+    table.add_row("Path", info['path'])
+    table.add_row("Name", info['name'])
+    table.add_row("Total Files", str(info['total_files']))
+    table.add_row("Supported Files", str(info['supported_files']))
+    table.add_row("Size", f"{info['size_bytes'] / 1024 / 1024:.1f} MB")
     
-    locator = CodeLocator(config)
-    locator.initialize(args.repo_path)
+    # Languages
+    if info['languages']:
+        lang_str = ", ".join(f"{lang} ({count})" for lang, count in info['languages'].items())
+        table.add_row("Languages", lang_str)
     
-    results = locator.search(
-        query=args.query,
-        search_type=args.type,
-        top_k=args.top_k
-    )
+    console.print(table)
+
+
+def _display_analysis_results(stats) -> None:
+    """Display analysis results."""
+    # Main stats table
+    table = Table(title="Analysis Results")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Count", style="white")
     
-    print(f"\n=== Search Results ({len(results)}) ===")
+    table.add_row("Total Entities", str(stats.total_entities))
+    table.add_row("Total Relationships", str(stats.total_relationships))
+    table.add_row("Files Analyzed", str(stats.file_count))
+    table.add_row("Total Lines", str(stats.total_lines))
+    if stats.analysis_time > 0:
+        table.add_row("Analysis Time", f"{stats.analysis_time:.2f}s")
     
-    for i, result in enumerate(results, 1):
-        node_info = result['node_info']
-        attrs = node_info['attributes']
+    console.print(table)
+    
+    # Entity breakdown
+    if stats.entity_counts:
+        entity_table = Table(title="Entity Breakdown")
+        entity_table.add_column("Type", style="cyan")
+        entity_table.add_column("Count", style="white")
         
-        print(f"\n{i}. {attrs.get('name', 'Unknown')}")
-        print(f"   Type: {attrs.get('type', 'Unknown')}")
-        print(f"   Path: {attrs.get('path', '')}")
-        print(f"   Score: {result['score']:.3f}")
-        print(f"   Method: {result['search_type']}")
+        for entity_type, count in stats.entity_counts.items():
+            if count > 0:
+                entity_table.add_row(entity_type.value.title(), str(count))
         
-        if attrs.get('line_start'):
-            print(f"   Lines: {attrs['line_start']}-{attrs.get('line_end', '')}")
+        console.print(entity_table)
     
-    # Save results if requested
-    if args.output:
-        save_results({'query': args.query, 'results': results}, args.output)
+    # Language breakdown
+    if stats.language_breakdown:
+        lang_table = Table(title="Language Breakdown")
+        lang_table.add_column("Language", style="cyan")
+        lang_table.add_column("Files", style="white")
+        
+        for language, count in stats.language_breakdown.items():
+            lang_table.add_row(language.title(), str(count))
+        
+        console.print(lang_table)
 
 
-def cmd_init(args) -> None:
-    """Handle init command."""
-    print(f"Initializing repository: {args.repo_path}")
-    
-    config = load_configuration(args.config)
-    
-    locator = CodeLocator(config)
-    locator.initialize(args.repo_path, force_rebuild=args.force)
-    
-    stats = locator.get_graph_stats()
-    if stats:
-        print(f"\nRepository initialized successfully!")
-        print(f"Nodes: {stats['total_nodes']}")
-        print(f"Edges: {stats['total_edges']}")
-        print(f"Files: {stats['node_counts'].get('file', 0)}")
-        print(f"Classes: {stats['node_counts'].get('class', 0)}")
-        print(f"Functions: {stats['node_counts'].get('function', 0)}")
-
-
-def cmd_stats(args) -> None:
-    """Handle stats command."""
-    print(f"Getting statistics for: {args.repo_path}")
-    
-    config = load_configuration(args.config)
-    
-    locator = CodeLocator(config)
-    locator.initialize(args.repo_path)
-    
-    stats = locator.get_graph_stats()
-    if stats:
-        print(f"\n=== Repository Statistics ===")
-        print(f"Total Nodes: {stats['total_nodes']}")
-        print(f"Total Edges: {stats['total_edges']}")
-        print(f"Max Depth: {stats['max_depth']}")
-        
-        print(f"\nNode Distribution:")
-        for node_type, count in stats['node_counts'].items():
-            print(f"  {node_type.capitalize()}: {count}")
-        
-        print(f"\nEdge Distribution:")
-        for edge_type, count in stats['edge_counts'].items():
-            print(f"  {edge_type.capitalize()}: {count}")
-
-
-def cmd_config(args) -> None:
-    """Handle config command."""
-    if args.config_action == 'create':
-        print(f"Creating default configuration: {args.output_path}")
-        
-        config = LocAgentConfig()
-        success = save_config(config, args.output_path, args.format)
-        
-        if success:
-            print(f"Default configuration saved to {args.output_path}")
-        else:
-            print("Error creating configuration file")
-            sys.exit(1)
-    
-    elif args.config_action == 'validate':
-        print(f"Validating configuration: {args.config_path}")
-        
-        config = load_config(args.config_path)
-        if config is None:
-            print("Error: Invalid configuration file")
-            sys.exit(1)
-        
-        from .utils.config_utils import validate_config
-        issues = validate_config(config)
-        
-        if issues:
-            print("Configuration issues found:")
-            for issue in issues:
-                print(f"  • {issue}")
-            sys.exit(1)
-        else:
-            print("Configuration is valid!")
-
-
-def main() -> None:
-    """Main CLI entry point."""
-    parser = create_parser()
-    args = parser.parse_args()
-    
-    if not args.command:
-        parser.print_help()
+def _display_query_result(result, output_format: str) -> None:
+    """Display query result."""
+    if output_format == 'json':
+        # Convert to JSON-serializable format
+        data = {
+            'summary': result.summary,
+            'confidence': result.confidence,
+            'entities': [{'name': e.name, 'type': e.type.value, 'path': e.path} for e in result.entities],
+            'suggestions': result.suggestions
+        }
+        console.print(json.dumps(data, indent=2))
         return
     
-    # Setup logging
-    log_level = "DEBUG" if getattr(args, 'verbose', False) else "INFO"
-    setup_logger(level=log_level)
+    # Text/Markdown format
+    console.print(Panel(result.summary, title="Answer", border_style="green"))
     
-    try:
-        if args.command == 'localize':
-            cmd_localize(args)
-        elif args.command == 'search':
-            cmd_search(args)
-        elif args.command == 'init':
-            cmd_init(args)
-        elif args.command == 'stats':
-            cmd_stats(args)
-        elif args.command == 'config':
-            cmd_config(args)
-        else:
-            print(f"Unknown command: {args.command}")
-            sys.exit(1)
+    if result.entities:
+        console.print("\n📋 Relevant Entities:")
+        for entity in result.entities[:5]:
+            console.print(f"  • {entity.type.value}: {entity.name} ({entity.path})")
     
-    except KeyboardInterrupt:
-        print("\nOperation cancelled by user")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Error: {e}")
-        if getattr(args, 'verbose', False):
-            import traceback
-            traceback.print_exc()
-        sys.exit(1)
+    if result.suggestions:
+        console.print("\n💡 Suggestions:")
+        for suggestion in result.suggestions:
+            console.print(f"  • {suggestion}")
+    
+    console.print(f"\n🎯 Confidence: {result.confidence:.2f}")
+
+
+def _display_context_result(result, output_format: str) -> None:
+    """Display context result."""
+    if output_format == 'json':
+        data = {
+            'analysis_summary': result.analysis_summary,
+            'confidence': result.confidence,
+            'entry_points': [{'name': e.name, 'type': e.type.value} for e in result.entry_points],
+            'fix_suggestions': result.fix_suggestions
+        }
+        console.print(json.dumps(data, indent=2))
+        return
+    
+    # Text format
+    console.print(Panel(result.analysis_summary, title="Analysis Summary", border_style="blue"))
+    
+    if result.entry_points:
+        console.print("\n🎯 Entry Points:")
+        for entity in result.entry_points:
+            console.print(f"  • {entity.type.value}: {entity.name}")
+    
+    if result.fix_suggestions:
+        console.print("\n🔧 Fix Suggestions:")
+        for suggestion in result.fix_suggestions:
+            console.print(f"  • {suggestion}")
+    
+    console.print(f"\n📊 Confidence: {result.confidence:.2f}")
+    
+    # Show minimal closure (truncated)
+    if result.minimal_closure:
+        closure_preview = result.minimal_closure[:500] + "..." if len(result.minimal_closure) > 500 else result.minimal_closure
+        console.print(Panel(closure_preview, title="Code Context (Preview)", border_style="yellow"))
+
+
+def _display_trace_result(result) -> None:
+    """Display trace result."""
+    if not result.entity:
+        console.print("❌ Entity not found", style="red")
+        return
+    
+    console.print(f"🔍 Tracing: {result.entity.type.value} {result.entity.name}")
+    
+    if result.dependencies:
+        console.print(f"\n⬇️  Dependencies ({len(result.dependencies)}):")
+        for dep in result.dependencies[:10]:
+            console.print(f"  • {dep.type.value}: {dep.name}")
+        if len(result.dependencies) > 10:
+            console.print(f"  ... and {len(result.dependencies) - 10} more")
+    
+    if result.dependents:
+        console.print(f"\n⬆️  Dependents ({len(result.dependents)}):")
+        for dep in result.dependents[:10]:
+            console.print(f"  • {dep.type.value}: {dep.name}")
+        if len(result.dependents) > 10:
+            console.print(f"  ... and {len(result.dependents) - 10} more")
+
+
+def _show_interactive_help() -> None:
+    """Show interactive mode help."""
+    help_text = """
+🔍 Interactive Mode Commands:
+
+• <question>        - Ask any question about the code
+• trace <entity>    - Trace dependencies of an entity
+• locate <problem>  - Find code relevant to a problem
+• help             - Show this help
+• exit/quit/q      - Exit interactive mode
+
+Examples:
+• "What does the authentication system do?"
+• "trace UserService"
+• "locate memory leak in payment processing"
+"""
+    console.print(Panel(help_text.strip(), title="Help", border_style="cyan"))
 
 
 if __name__ == '__main__':

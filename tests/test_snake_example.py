@@ -20,7 +20,7 @@ class TestSnakeGameAnalysis(unittest.TestCase):
         self.assertTrue(self.snake_path.exists(), f"Snake game example not found at {self.snake_path}")
         
         # Initialize Coretx for testing (without LLM)
-        self.ctx = Coretx()
+        self.ctx = Coretx(enable_semantic_analysis=False)
         # Disable semantic analyzer to avoid LLM calls
         self.ctx.semantic_analyzer = None
         

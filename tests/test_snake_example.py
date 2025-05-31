@@ -19,8 +19,10 @@ class TestSnakeGameAnalysis(unittest.TestCase):
         self.snake_path = Path(__file__).parent.parent / "examples" / "snake_game"
         self.assertTrue(self.snake_path.exists(), f"Snake game example not found at {self.snake_path}")
         
-        # Initialize Coretx for testing (without LLM)
-        self.ctx = Coretx(enable_semantic_analysis=False)
+        # Initialize Coretx for testing (with mock LLM)
+        import os
+        os.environ["OPENAI_API_KEY"] = "test-key"
+        self.ctx = Coretx()
         # Disable semantic analyzer to avoid LLM calls
         self.ctx.semantic_analyzer = None
         

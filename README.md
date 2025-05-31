@@ -280,7 +280,7 @@ class Relationship:
     from: str                     # from file
     to: str                       # to file
     description: str              # Semantic description
-    embedding: np.ndarray         # Vector representation
+    embedding: np.ndarray         # Vector representation [!important] relationship has semantic embedding
     metadata: Dict[str, Any]      # Language-specific metadata
 ```
 
@@ -331,12 +331,12 @@ Coretx supports intuitive natural language queries:
 
 ```python
 # Architecture queries
-ctx.query("What is the overall architecture of this system?")
-ctx.query("How do the frontend and backend communicate?")
+ctx.query(graph, "What is the overall architecture of this system?")
+ctx.query(graph, "How do the frontend and backend communicate?")
 
 # Bug localization
-ctx.locate("Where might memory leaks occur in the authentication flow?")
-ctx.locate("Find potential SQL injection vulnerabilities")
+ctx.locate(graph, "Where might memory leaks occur in the authentication flow?")
+ctx.locate(graph, "Find potential SQL injection vulnerabilities")
 ```
 
 
@@ -410,7 +410,7 @@ When you run `Coretx.analyze()`, you'll see:
 
 ### Localization Output
 
-When you run `Coretx.localize()` for "Fix memory leak in user authentication":
+$ coretx locate ./backend "Memory leak in authentication"
 
 ```
 🎯 Localizing code for: "Fix memory leak in user authentication"
@@ -485,6 +485,35 @@ backend/
 The memory leak occurs in AuthManager where sessions are stored in an 
 in-memory dictionary but never removed. The logout() method clears the 
 Redis session but not the local dictionary reference.
+```
+
+### Architecture Query
+```
+$ coretx query ./myapp "How does the payment system work?"
+
+💳 Payment System Architecture
+
+The payment system uses a service-oriented architecture:
+
+1. **Frontend** (React)
+   └─> PaymentForm component initiates transactions
+
+2. **API Gateway** (Node.js)  
+   └─> /api/payments/* routes handle requests
+
+3. **Payment Service** (Python)
+   ├─> Stripe integration for processing
+   ├─> Database for transaction records
+   └─> Event system for notifications
+
+Key flows:
+• Checkout: PaymentForm → API → PaymentService → Stripe
+• Webhooks: Stripe → WebhookHandler → EventBus → Services
+
+Related files:
+- frontend/src/components/PaymentForm.tsx
+- backend/services/payment_service.py
+- backend/api/routes/payments.py
 ```
 
 ### Cross-Language Dependency Output
@@ -640,24 +669,6 @@ ctx.configure(embedding_cache_size=10000)
 ctx.analyze(path, num_workers=8)
 ```
 
-## 📊 How It Works
-
-```mermaid
-graph TD
-    A[Source Code] -->|Parse| B[AST Analysis]
-    B -->|Extract| C[Code Entities]
-    C -->|LLM Analysis| D[Semantic Understanding]
-    D -->|Build| E[Knowledge Graph]
-    E -->|Query| F[Relevant Context]
-    F -->|Format| G[LLM-Ready Output]
-```
-
-1. **Parsing**: Uses Tree-sitter for robust AST parsing across languages
-2. **Analysis**: LLMs understand the purpose and relationships of code entities
-3. **Indexing**: Semantic embeddings enable intelligent search
-4. **Retrieval**: Graph algorithms find minimal necessary context
-5. **Formatting**: Output optimized for LLM understanding
-
 ## 🔧 Configuration
 
 ### Configuration File (coretx.yaml)
@@ -696,6 +707,7 @@ output:
 export CORETX_API_KEY="your-api-key"
 export CORETX_API_BASE="https://api.openai.com/v1"
 export CORETX_MODEL="gpt-4"
+export CORETX_EMBEDDING_MODEL="gpt-4"
 export CORETX_CACHE_DIR="~/.coretx/cache"
 ```
 
